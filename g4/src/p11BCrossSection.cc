@@ -1,15 +1,15 @@
-#include "JUNACrossSection.hh"
+#include "p11BCrossSection.hh"
 
 
-JUNACrossSection::JUNACrossSection()
+p11BCrossSection::p11BCrossSection()
 {}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-JUNACrossSection::~JUNACrossSection()
+p11BCrossSection::~p11BCrossSection()
 {}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double JUNACrossSection::GetIsoCrossSection(const G4DynamicParticle *aPar, G4int Z, G4int A, const G4Isotope *, const G4Element *, const G4Material *)
+G4double p11BCrossSection::GetIsoCrossSection(const G4DynamicParticle *aPar, G4int Z, G4int A, const G4Isotope *, const G4Element *, const G4Material *)
 {
   G4double crossSection = 0.;
   const G4int aParA = aPar->GetDefinition()->GetBaryonNumber();
@@ -32,6 +32,8 @@ G4double JUNACrossSection::GetIsoCrossSection(const G4DynamicParticle *aPar, G4i
     else{
       crossSection = 0.;
     }
+    crossSection *= 1e10;
+
     /*
     if(ecm>=0.2 && ecm<0.25){
       sfactor = 0.1849*ecm*ecm-0.01524*ecm+0.006219;
@@ -57,13 +59,13 @@ G4double JUNACrossSection::GetIsoCrossSection(const G4DynamicParticle *aPar, G4i
   else{
       crossSection = 0.;
   }
-  crossSection = crossSection*cm2*1000;
+  crossSection = crossSection*cm2;
  // G4cout<<crossSection<<G4endl;
   return crossSection;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double JUNACrossSection::GetEcmValue(G4double projectA, G4double targetA, G4double elab)
+G4double p11BCrossSection::GetEcmValue(G4double projectA, G4double targetA, G4double elab)
 {
   return targetA/(projectA+targetA)*elab;
 }

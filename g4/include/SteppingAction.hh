@@ -29,7 +29,7 @@
 
 #ifndef B1SteppingAction_h
 #define B1SteppingAction_h 1
-
+#include "G4UserLimits.hh"
 #include "G4UserSteppingAction.hh"
 #include "globals.hh"
 
@@ -38,7 +38,7 @@ class G4LogicalVolume;
 /// Stepping action class
 ///
 
-
+class G4UserLimits;
 
 class EventAction;
 

@@ -35,7 +35,7 @@
 #include "G4UImanager.hh"
 #include "FTFP_BERT.hh"
 #include "G4StepLimiterPhysics.hh"
-#include "JUNAReaction.hh"
+#include "p11BReaction.hh"
 #include "Randomize.hh"
 #include "QBBC.hh"
 #include "G4VisExecutive.hh"
@@ -47,6 +47,9 @@
 #include "G4HadronElasticPhysics.hh"
 
 #include "G4StepLimiterPhysics.hh"
+#include "G4Proton.hh"
+#include "G4VProcess.hh"
+#include "G4StepLimiter.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
@@ -73,11 +76,12 @@ int main(int argc,char** argv)
   //
   runManager->SetUserInitialization(new DetectorConstruction());//建立探测器
 
-  G4VModularPhysicsList* physicsList = new QBBC;
-  physicsList->RegisterPhysics(new G4StepLimiterPhysics());
-  physicsList->RegisterPhysics(new IonIonInelasticPhysicsUser("standard"));
+  //G4VModularPhysicsList* physicsList = new QBBC;
+  G4VModularPhysicsList *physicsList = new PhysicsList();
+  //physicsList->RegisterPhysics(new G4StepLimiterPhysics());
+  //physicsList->RegisterPhysics(new IonIonInelasticPhysicsUser("standard"));
   //physicsList->RegisterPhysics(new G4HadronElasticPhysics(1));
-  runManager->SetUserInitialization(physicsList);  //注册了QBBC和自定义的HB反应
+  runManager->SetUserInitialization(physicsList);  
   
 
   // Set user action classes

@@ -45,7 +45,7 @@ RunAction::RunAction()
   analysisManager -> CreateNtupleDColumn(0,"CopyNb");
   analysisManager -> CreateNtupleDColumn(0,"TrackID");
   analysisManager -> FinishNtuple(0);
-  analysisManager -> CreateNtuple("AllReaction","E1 theta1 phi1 E2 theta2 phi2 E3 theta3 phi3");
+  analysisManager -> CreateNtuple("AllReaction","E1 theta1 phi1 E2 theta2 phi2 E3 theta3 phi3 ExBe");
   analysisManager -> CreateNtupleDColumn(1,"E1");
   analysisManager -> CreateNtupleDColumn(1,"theta1");
   analysisManager -> CreateNtupleDColumn(1,"phi1");
@@ -57,6 +57,12 @@ RunAction::RunAction()
   analysisManager -> CreateNtupleDColumn(1,"E3");
   analysisManager -> CreateNtupleDColumn(1,"theta3");
   analysisManager -> CreateNtupleDColumn(1,"phi3");
+  
+  analysisManager -> CreateNtupleDColumn(1,"EBe");
+  analysisManager -> CreateNtupleDColumn(1,"thetaBe");
+  analysisManager -> CreateNtupleDColumn(1,"phiBe");
+  
+  analysisManager -> CreateNtupleDColumn(1,"ExBe");
 
   analysisManager -> FinishNtuple(1);
 }
@@ -73,7 +79,7 @@ void RunAction::BeginOfRunAction(const G4Run*)
   //inform the runManager to save random number seed
   G4RunManager::GetRunManager()->SetRandomNumberStore(false);
   auto analysisManager = G4AnalysisManager::Instance();
-  G4String fileName = "HBresult.root";
+  G4String fileName = "../data/HBresult.root";
   analysisManager -> OpenFile(fileName);
 }
 

@@ -54,7 +54,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
   public:
     G4VPhysicalVolume* Construct() override;
     void ConstructSDandField() override;
-  G4LogicalVolume* GetScoringVolume() const { return fScoringVolume; }
+    G4LogicalVolume* fScoringVolume = nullptr;
   private:
     // methods
     void DefineMaterials();
@@ -67,9 +67,6 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4Material*       fTargetMaterial = nullptr;  // pointer to the target  material
     G4Material*       fStripMaterial = nullptr; // pointer to the chamber material
   
-
-  protected:
-    G4LogicalVolume* fScoringVolume = nullptr;
 };
 
 

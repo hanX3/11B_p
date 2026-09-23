@@ -10,11 +10,11 @@
 #include "G4Element.hh"
 #include "G4Material.hh"
 
-class JUNACrossSection: public G4VCrossSectionDataSet
+class p11BCrossSection: public G4VCrossSectionDataSet
 {
 public:
-  JUNACrossSection();
-  virtual ~JUNACrossSection();
+  p11BCrossSection();
+  virtual ~p11BCrossSection();
   virtual G4bool IsIsoApplicable(const G4DynamicParticle*, G4int, G4int, const G4Element*, const G4Material*){ return true;}
   virtual G4double GetIsoCrossSection(const G4DynamicParticle *aPar, G4int Z, G4int A, const G4Isotope *iso, const G4Element *elm, const G4Material *mat);
 

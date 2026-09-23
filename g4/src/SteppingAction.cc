@@ -31,6 +31,8 @@
 #include "EventAction.hh"
 #include "DetectorConstruction.hh"
 
+#include "G4Proton.hh"
+
 #include "G4Step.hh"
 #include "G4Event.hh"
 #include "G4RunManager.hh"
@@ -53,6 +55,7 @@ SteppingAction::~SteppingAction()
 
 void SteppingAction::UserSteppingAction(const G4Step* step)
 {
+
 /*
   if (!fScoringVolume) {
     const DetectorConstruction* detConstruction

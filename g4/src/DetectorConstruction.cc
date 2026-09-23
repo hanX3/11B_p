@@ -247,12 +247,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   ///                                           minEkin));
 
   // Always return the physical world
+  
   G4UserLimits* stepLimit = new G4UserLimits();
-  stepLimit ->SetMaxAllowedStep(0.02*um);
+  stepLimit ->SetMaxAllowedStep(10*nm);
  
   fLogicTarget -> SetUserLimits(stepLimit);
  
-  fScoringVolume = fLogicTarget;
   return worldPV;
 }
 

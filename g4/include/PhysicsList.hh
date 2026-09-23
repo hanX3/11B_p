@@ -16,7 +16,7 @@ public:
   PhysicsList();
   virtual ~PhysicsList();
 
-  virtual void SetCuts();
+  virtual void SetCuts();  
   void AddStepMax();
 };
 
