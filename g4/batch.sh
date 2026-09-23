@@ -20,13 +20,8 @@ CALL_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 find_project_root() {
-  if command -v git >/dev/null 2>&1; then
-    if git -C "${SCRIPT_DIR}" rev-parse --show-toplevel >/dev/null 2>&1; then
-      git -C "${SCRIPT_DIR}" rev-parse --show-toplevel
-      return 0
-    fi
-  fi
-
+  # The Git repository can contain g4/ alongside other directories. Locate
+  # the Geant4 project by its source markers rather than the Git top level.
   if [[ -f "${SCRIPT_DIR}/CMakeLists.txt" && -f "${SCRIPT_DIR}/HB.cc" ]]; then
     echo "${SCRIPT_DIR}"
     return 0
