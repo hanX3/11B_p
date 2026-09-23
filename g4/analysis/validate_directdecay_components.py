@@ -12,21 +12,21 @@ import numpy as np
 
 REQUIRED_BRANCHES = [
     "sigma_eval_b",
-    "sigma_165_model_b",
-    "sigma_165_total_b",
-    "sigma_165_used_b",
+    "sigma_162_model_b",
+    "sigma_162_total_b",
+    "sigma_162_used_b",
     "sigma_675_total_b",
     "sigma_675_used_b",
     "sigma_total_used_b",
     "sigma_directdecay_b",
     "sigma_directdecay_sampling_b",
     "direct_decay_fraction",
-    "direct_decay_fraction_165",
+    "direct_decay_fraction_162",
     "direct_decay_fraction_675",
-    "sequential_decay_fraction_165",
+    "sequential_decay_fraction_162",
     "sequential_decay_fraction_675",
     "enable_direct_decay",
-    "scale_factor_165",
+    "scale_factor_162",
     "scale_factor_675",
     "channel_probability_directdecay",
     "reaction_channel",
@@ -117,20 +117,20 @@ def validate_file(path: Path) -> int:
 
         for name in (
             "sigma_eval_b",
-            "sigma_165_model_b",
-            "sigma_165_total_b",
-            "sigma_165_used_b",
+            "sigma_162_model_b",
+            "sigma_162_total_b",
+            "sigma_162_used_b",
             "sigma_675_total_b",
             "sigma_675_used_b",
             "sigma_total_used_b",
             "sigma_directdecay_b",
             "sigma_directdecay_sampling_b",
             "direct_decay_fraction",
-            "direct_decay_fraction_165",
+            "direct_decay_fraction_162",
             "direct_decay_fraction_675",
-            "sequential_decay_fraction_165",
+            "sequential_decay_fraction_162",
             "sequential_decay_fraction_675",
-            "scale_factor_165",
+            "scale_factor_162",
             "scale_factor_675",
             "channel_probability_directdecay",
             "event_weight",
@@ -149,10 +149,10 @@ def validate_file(path: Path) -> int:
             print("  sigma_directdecay_sampling_b has negative values WARN")
             status = 1
 
-        sigma_165_expected = data["sequential_decay_fraction_165"] * data["sigma_165_total_b"]
-        diff_165 = max_abs(data["sigma_165_used_b"] - sigma_165_expected)
-        print_metric("max |sigma_165_used - expected|", diff_165, TOL)
-        if diff_165 >= TOL:
+        sigma_162_expected = data["sequential_decay_fraction_162"] * data["sigma_162_total_b"]
+        diff_162 = max_abs(data["sigma_162_used_b"] - sigma_162_expected)
+        print_metric("max |sigma_162_used - expected|", diff_162, TOL)
+        if diff_162 >= TOL:
             status = 1
 
         sigma_675_expected = data["sequential_decay_fraction_675"] * data["sigma_675_total_b"]
@@ -163,7 +163,7 @@ def validate_file(path: Path) -> int:
 
         sigma_direct_expected = np.where(
             data["enable_direct_decay"] != 0,
-            (1.0 - data["sequential_decay_fraction_165"]) * data["sigma_165_total_b"]
+            (1.0 - data["sequential_decay_fraction_162"]) * data["sigma_162_total_b"]
             + (1.0 - data["sequential_decay_fraction_675"]) * data["sigma_675_total_b"],
             0.0,
         )
@@ -177,7 +177,7 @@ def validate_file(path: Path) -> int:
         print_metric("max |sigma_directdecay - expected|", diff_direct, TOL)
 
         sigma_sum = (
-            data["sigma_165_used_b"]
+            data["sigma_162_used_b"]
             + data["sigma_675_used_b"]
             + data["sigma_directdecay_b"]
         )
@@ -191,7 +191,7 @@ def validate_file(path: Path) -> int:
         total = int(channels.size)
         print(f"  n_total_events = {total}")
         for channel, label in (
-            (0, "n_165"),
+            (0, "n_162"),
             (1, "n_675"),
             (2, "n_directdecay"),
             (3, "n_gamma"),
@@ -214,11 +214,11 @@ def validate_file(path: Path) -> int:
         print_metric("max |direct_decay_fraction - expected|", diff_direct_fraction, TOL)
         if diff_direct_fraction >= TOL:
             status = 1
-        diff_direct_fraction_165 = max_abs(
-            data["direct_decay_fraction_165"] - (1.0 - data["sequential_decay_fraction_165"])
+        diff_direct_fraction_162 = max_abs(
+            data["direct_decay_fraction_162"] - (1.0 - data["sequential_decay_fraction_162"])
         )
-        print_metric("max |direct_decay_fraction_165 - expected|", diff_direct_fraction_165, TOL)
-        if diff_direct_fraction_165 >= TOL:
+        print_metric("max |direct_decay_fraction_162 - expected|", diff_direct_fraction_162, TOL)
+        if diff_direct_fraction_162 >= TOL:
             status = 1
         diff_direct_fraction_675 = max_abs(
             data["direct_decay_fraction_675"] - (1.0 - data["sequential_decay_fraction_675"])
@@ -306,20 +306,20 @@ def validate_file_pyroot(path: Path) -> int:
 
     for name in (
         "sigma_eval_b",
-        "sigma_165_model_b",
-        "sigma_165_total_b",
-        "sigma_165_used_b",
+        "sigma_162_model_b",
+        "sigma_162_total_b",
+        "sigma_162_used_b",
         "sigma_675_total_b",
         "sigma_675_used_b",
         "sigma_total_used_b",
         "sigma_directdecay_b",
         "sigma_directdecay_sampling_b",
         "direct_decay_fraction",
-        "direct_decay_fraction_165",
+        "direct_decay_fraction_162",
         "direct_decay_fraction_675",
-        "sequential_decay_fraction_165",
+        "sequential_decay_fraction_162",
         "sequential_decay_fraction_675",
-        "scale_factor_165",
+        "scale_factor_162",
         "scale_factor_675",
         "channel_probability_directdecay",
         "event_weight",
@@ -338,10 +338,10 @@ def validate_file_pyroot(path: Path) -> int:
         print("  sigma_directdecay_sampling_b has negative values WARN")
         status = 1
 
-    sigma_165_expected = data["sequential_decay_fraction_165"] * data["sigma_165_total_b"]
-    diff_165 = max_abs(data["sigma_165_used_b"] - sigma_165_expected)
-    print_metric("max |sigma_165_used - expected|", diff_165, TOL)
-    if diff_165 >= TOL:
+    sigma_162_expected = data["sequential_decay_fraction_162"] * data["sigma_162_total_b"]
+    diff_162 = max_abs(data["sigma_162_used_b"] - sigma_162_expected)
+    print_metric("max |sigma_162_used - expected|", diff_162, TOL)
+    if diff_162 >= TOL:
         status = 1
 
     sigma_675_expected = data["sequential_decay_fraction_675"] * data["sigma_675_total_b"]
@@ -352,7 +352,7 @@ def validate_file_pyroot(path: Path) -> int:
 
     sigma_direct_expected = np.where(
         data["enable_direct_decay"] != 0,
-        (1.0 - data["sequential_decay_fraction_165"]) * data["sigma_165_total_b"]
+        (1.0 - data["sequential_decay_fraction_162"]) * data["sigma_162_total_b"]
         + (1.0 - data["sequential_decay_fraction_675"]) * data["sigma_675_total_b"],
         0.0,
     )
@@ -372,11 +372,11 @@ def validate_file_pyroot(path: Path) -> int:
     if diff_direct_fraction >= TOL:
         status = 1
 
-    diff_direct_fraction_165 = max_abs(
-        data["direct_decay_fraction_165"] - (1.0 - data["sequential_decay_fraction_165"])
+    diff_direct_fraction_162 = max_abs(
+        data["direct_decay_fraction_162"] - (1.0 - data["sequential_decay_fraction_162"])
     )
-    print_metric("max |direct_decay_fraction_165 - expected|", diff_direct_fraction_165, TOL)
-    if diff_direct_fraction_165 >= TOL:
+    print_metric("max |direct_decay_fraction_162 - expected|", diff_direct_fraction_162, TOL)
+    if diff_direct_fraction_162 >= TOL:
         status = 1
 
     diff_direct_fraction_675 = max_abs(
@@ -386,7 +386,7 @@ def validate_file_pyroot(path: Path) -> int:
     if diff_direct_fraction_675 >= TOL:
         status = 1
 
-    sigma_sum = data["sigma_165_used_b"] + data["sigma_675_used_b"] + data["sigma_directdecay_b"]
+    sigma_sum = data["sigma_162_used_b"] + data["sigma_675_used_b"] + data["sigma_directdecay_b"]
     diff_total = max_abs(data["sigma_total_used_b"] - sigma_sum)
     print_metric("max |sigma_total_used - sum|", diff_total, TOL)
     if diff_total >= TOL:
@@ -397,7 +397,7 @@ def validate_file_pyroot(path: Path) -> int:
     total = int(channels.size)
     print(f"  n_total_events = {total}")
     for channel, label in (
-        (0, "n_165"),
+        (0, "n_162"),
         (1, "n_675"),
         (2, "n_directdecay"),
         (3, "n_gamma"),

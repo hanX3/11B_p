@@ -130,9 +130,9 @@ int main(int argc, char** argv)
     G4String file_name = argv[1];
     ui_manager->ApplyCommand(command + file_name);
   } else {
-    ui_manager->ApplyCommand("/control/execute macros/init_vis.mac");
+    ui_manager->ApplyCommand("/control/execute ../macros/init_vis.mac");
     if (ui->IsGUI()) {
-      ui_manager->ApplyCommand("/control/execute macros/gui.mac");
+      ui_manager->ApplyCommand("/control/execute ../macros/gui.mac");
     }
     ui->SessionStart();
     delete ui;

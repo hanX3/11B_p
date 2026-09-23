@@ -1,0 +1,71 @@
+# =====================================================================
+# validation_162_direct3alpha.mac
+#
+# Purpose: generate 162-keV DIRECT three-body (democratic phase-space)
+#          3-alpha events, i.e. p + 11B -> 12C* -> alpha + alpha + alpha
+#          WITHOUT going through the sequential alpha + 8Be intermediate.
+#
+# This is the "direct decay" counterpart to
+# validation_162_primary_spectrum.mac (which forces the sequential path).
+#
+# Key switch:
+#   162SequentialDecayFraction 0.0   -> direct-decay fraction = 1.0
+#   enableDirectDecay          true  -> direct channel is active
+#
+# Read from the reaction tree ("tr"):
+#   e_alpha1, e_alpha2, e_alpha3         : lab kinetic energies (MeV)
+#   e_3alpha_cm_alpha1/2/3               : energies in the 3a c.m. frame
+#   opening_angle_alpha12_cm / 13 / 23   : pairwise opening angles (Dalitz)
+#   branch_id       : -1  (no alpha0/alpha1 split for direct decay)
+#   background_mode : 2   (PhaseSpace flag for the direct-decay events)
+#   resonance_id    : 162
+#
+# Notes:
+#   * The three alphas are identical and produced symmetrically, so there
+#     is NO alpha0/alpha1 peak structure -- expect a smooth, broad
+#     phase-space energy distribution instead.
+#   * Cross-section bias is opened wide for statistics; it changes only
+#     the RATE, not the kinematics.
+#   * Primary/secondary angular-distribution switches are irrelevant for
+#     pure phase space and are left OFF for a clean isotropic sample.
+# =====================================================================
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 162 keV
+
+# --- output: only the reaction tree is needed ---
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+
+# --- open the cross section wide (rate only; kinematics untouched) ---
+/h11b/crossSectionBiasFactor 1000000000
+
+# --- force DIRECT 3-alpha decay: sequential fraction = 0 => direct = 1 ---
+/h11b/enableDirectDecay true
+/h11b/162SequentialDecayFraction 0.0
+
+# --- isolate the 162 resonance: shut the 675 channel down ---
+/h11b/675SequentialDecayFraction 1.0
+/h11b/675ScaleFactor 0.0
+
+# --- turn off gamma-capture competition for a clean 3a sample ---
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+# --- angular distributions OFF: pure phase space is isotropic ---
+/h11b/enable162PrimaryAngularDistribution false
+/h11b/enable162Alpha1SecondaryAngularCorrelation false
+
+/h11b/printConfig
+/output/printConfig
+
+/run/beamOn 1000000

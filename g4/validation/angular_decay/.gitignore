@@ -1,6 +1,0 @@
-output/*
-!output/.gitkeep
-work/
-.mplconfig/
-*.txt
-*.log

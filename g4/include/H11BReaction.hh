@@ -21,7 +21,7 @@ class H11BReaction : public G4HadronicInteraction
 public:
   enum class ReactionChannel
   {
-    Resonance165 = 0,
+    Resonance162 = 0,
     Resonance675 = 1,
     DirectDecay3Alpha = 2,
     GammaCapture12C = 3
@@ -29,7 +29,7 @@ public:
 
   enum ResonanceType
   {
-    Resonance165,
+    Resonance162,
     Resonance675
   };
 
@@ -41,10 +41,10 @@ public:
   G4HadFinalState* ApplyYourself(const G4HadProjectile& projectile, G4Nucleus& target) override;
   void ReactionKinematic(const G4HadProjectile& projectile, G4ParticleDefinition* target, G4ParticleDefinition* product1, G4ParticleDefinition* product2, G4ParticleDefinition* product3);
   void SetCrossSectionBiasFactorCommand(G4double factor);
-  void Set165SequentialDecayFractionCommand(G4double fraction);
+  void Set162SequentialDecayFractionCommand(G4double fraction);
   void Set675SequentialDecayFractionCommand(G4double fraction);
   void SetDirectDecayEnabledCommand(G4bool enabled);
-  void Set165BWScaleFactorCommand(G4double factor);
+  void Set162BWScaleFactorCommand(G4double factor);
   void Set675ScaleFactorCommand(G4double factor);
   void Set675AlphaDecayModelCommand(const G4String& model);
   void Set675StrictL1FractionCommand(G4double value);
@@ -62,29 +62,29 @@ public:
   void SetEnable675Alpha1SecondaryAngularCorrelationCommand(G4bool enabled);
   void Set675Alpha1SecondaryA2Command(G4double value);
   void Set675Alpha1SecondaryA4Command(G4double value);
-  void SetEnable165PrimaryAngularDistributionCommand(G4bool enabled);
-  void Set165PrimaryAngularA1Command(G4double value);
-  void Set165PrimaryAngularA2Command(G4double value);
-  void Set165PrimaryAlpha0AngularA1Command(G4double value);
-  void Set165PrimaryAlpha0AngularA2Command(G4double value);
-  void SetEnable165Alpha1SecondaryAngularCorrelationCommand(G4bool enabled);
-  void Set165Alpha1SecondaryA2Command(G4double value);
-  void Set165Alpha1SecondaryA4Command(G4double value);
-  void SetEnable165Gamma0AngularDistributionCommand(G4bool enabled);
-  void Set165Gamma0AngularA1Command(G4double value);
-  void Set165Gamma0AngularA2Command(G4double value);
+  void SetEnable162PrimaryAngularDistributionCommand(G4bool enabled);
+  void Set162PrimaryAngularA1Command(G4double value);
+  void Set162PrimaryAngularA2Command(G4double value);
+  void Set162PrimaryAlpha0AngularA1Command(G4double value);
+  void Set162PrimaryAlpha0AngularA2Command(G4double value);
+  void SetEnable162Alpha1SecondaryAngularCorrelationCommand(G4bool enabled);
+  void Set162Alpha1SecondaryA2Command(G4double value);
+  void Set162Alpha1SecondaryA4Command(G4double value);
+  void SetEnable162Gamma0AngularDistributionCommand(G4bool enabled);
+  void Set162Gamma0AngularA1Command(G4double value);
+  void Set162Gamma0AngularA2Command(G4double value);
   void SetEnable675GammaAngularDistributionCommand(G4bool enabled);
   void Set675GammaAngularA1Command(G4double value);
   void Set675GammaAngularA2Command(G4double value);
-  void Set165GammaCaptureEnabledCommand(G4bool enabled);
+  void Set162GammaCaptureEnabledCommand(G4bool enabled);
   void Set675GammaCaptureEnabledCommand(G4bool enabled);
   void SetGammaBiasFactorCommand(G4double factor);
   void PrintConfigCommand();
 
 private:
   H11BReactionData reaction_data;
-  ResonanceType resonance_type = Resonance165;
-  ReactionChannel reaction_channel = ReactionChannel::Resonance165;
+  ResonanceType resonance_type = Resonance162;
+  ReactionChannel reaction_channel = ReactionChannel::Resonance162;
   H11BGammaResonance gamma_resonance = H11BGammaResonance::None;
   H11BGammaBranch gamma_branch = H11BGammaBranch::None;
   H11BCrossSectionComponents selected_components;
@@ -96,8 +96,8 @@ private:
   void GenerateThreeBodyPhaseSpace(const G4HadProjectile& projectile, G4ParticleDefinition* target, G4ParticleDefinition* product1, G4ParticleDefinition* product2, G4ParticleDefinition* product3);
   void Generate675SymmetrizedCoherent3Alpha(const G4HadProjectile& projectile, G4ParticleDefinition* target, G4ParticleDefinition* product1, G4ParticleDefinition* product2, G4ParticleDefinition* product3);
   void GenerateGammaCapture(const G4HadProjectile& projectile, G4ParticleDefinition* target);
-  void Generate165Gamma0(const G4LorentzVector& initial_cm, const G4LorentzVector& initial_lab, G4ParticleDefinition* c12_ground, G4ParticleDefinition* gamma_particle, const G4ThreeVector& beam_axis_cm);
-  void Generate165Gamma1Cascade(const G4LorentzVector& initial_cm, const G4LorentzVector& initial_lab, G4ParticleDefinition* c12_ground, G4ParticleDefinition* gamma_particle);
+  void Generate162Gamma0(const G4LorentzVector& initial_cm, const G4LorentzVector& initial_lab, G4ParticleDefinition* c12_ground, G4ParticleDefinition* gamma_particle, const G4ThreeVector& beam_axis_cm);
+  void Generate162Gamma1Cascade(const G4LorentzVector& initial_cm, const G4LorentzVector& initial_lab, G4ParticleDefinition* c12_ground, G4ParticleDefinition* gamma_particle);
   void Generate675GammaLine(const G4LorentzVector& initial_cm, const G4LorentzVector& initial_lab, G4ParticleDefinition* c12_ground, G4ParticleDefinition* gamma_particle, const G4ThreeVector& beam_axis_cm);
   G4double SamplePhaseSpaceM23(G4double sqrt_s, G4double m_alpha) const;
   G4double Sample8Be2PlusExcitationEnergy(G4double ex_max);

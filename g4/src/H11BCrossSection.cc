@@ -11,10 +11,10 @@
 
 namespace {
 G4double g_cross_section_bias_factor = 1.0;
-G4double g_165_sequential_decay_fraction = 0.99;
+G4double g_162_sequential_decay_fraction = 0.99;
 G4double g_675_sequential_decay_fraction = 0.99;
 G4bool g_enable_direct_decay = true;
-G4double g_165_bw_scale_factor = 1.0;
+G4double g_162_bw_scale_factor = 1.0;
 G4double g_675_scale_factor = 1.0;
 
 constexpr G4double H11B675GammaRelativeIntensitySum = 15.7 + 100.0 + 6.8 + 0.16;
@@ -64,58 +64,58 @@ H11BCrossSectionComponents H11BCrossSection::CalculateComponents(G4double kineti
   const G4double energy_cm_keV = GetEcmValue(1., 11., kinetic_energy_lab / keV);
 
   H11BCrossSectionComponents components;
-  components.sigma_165_model = GetSigma165(energy_cm_keV) * cm2;
+  components.sigma_162_model = GetSigma162(energy_cm_keV) * cm2;
 
   // Phenomenological weighted_chebE16 fit675 component from cs_model.  This is
   // not an isolated 675-keV Breit-Wigner resonance.
   components.sigma_675_model = GetFit675CrossSection(kinetic_energy_lab);
 
-  components.sigma_165_total = std::max(0.0, g_165_bw_scale_factor) * components.sigma_165_model;
+  components.sigma_162_total = std::max(0.0, g_162_bw_scale_factor) * components.sigma_162_model;
   components.sigma_675_total = std::max(0.0, g_675_scale_factor) * components.sigma_675_model;
 
-  const G4double seq165 = g_enable_direct_decay ? ClampBranchFraction(g_165_sequential_decay_fraction) : 1.0;
+  const G4double seq162 = g_enable_direct_decay ? ClampBranchFraction(g_162_sequential_decay_fraction) : 1.0;
   const G4double seq675 = g_enable_direct_decay ? ClampBranchFraction(g_675_sequential_decay_fraction) : 1.0;
-  const G4double direct165 = g_enable_direct_decay ? 1.0 - seq165 : 0.0;
+  const G4double direct162 = g_enable_direct_decay ? 1.0 - seq162 : 0.0;
   const G4double direct675 = g_enable_direct_decay ? 1.0 - seq675 : 0.0;
 
-  components.sigma_165 = seq165 * components.sigma_165_total;
+  components.sigma_162 = seq162 * components.sigma_162_total;
   components.sigma_675 = seq675 * components.sigma_675_total;
-  components.sigma_165_directdecay = direct165 * components.sigma_165_total;
+  components.sigma_162_directdecay = direct162 * components.sigma_162_total;
   components.sigma_675_directdecay = direct675 * components.sigma_675_total;
-  components.sigma_directdecay = components.sigma_165_directdecay + components.sigma_675_directdecay;
+  components.sigma_directdecay = components.sigma_162_directdecay + components.sigma_675_directdecay;
 
   // Backward-compatible aliases for old analysis scripts.
   components.sigma_background = components.sigma_directdecay;
 
-  components.sigma_total = components.sigma_165 + components.sigma_675 + components.sigma_directdecay;
+  components.sigma_total = components.sigma_162 + components.sigma_675 + components.sigma_directdecay;
   // Backward-compatible diagnostic alias for the only remaining 3-alpha model:
-  // scaled 165 BW plus scaled fit675, independent of the sequential/direct split.
+  // scaled 162 BW plus scaled fit675, independent of the sequential/direct split.
   components.sigma_eval = components.sigma_total;
   components.cross_section_bias_factor = g_cross_section_bias_factor;
   components.direct_decay_fraction =
     components.sigma_total > 0.0 ? components.sigma_directdecay / components.sigma_total : 0.0;
-  components.sequential_decay_fraction_165 = seq165;
+  components.sequential_decay_fraction_162 = seq162;
   components.sequential_decay_fraction_675 = seq675;
-  components.direct_decay_fraction_165 = direct165;
+  components.direct_decay_fraction_162 = direct162;
   components.direct_decay_fraction_675 = direct675;
-  components.scale_factor_165 = g_165_bw_scale_factor;
+  components.scale_factor_162 = g_162_bw_scale_factor;
   components.scale_factor_675 = g_675_scale_factor;
   components.enable_direct_decay = g_enable_direct_decay;
   components.background_bias_factor = components.direct_decay_fraction;
 
-  components.sigma_165_sampling = components.sigma_165 * components.cross_section_bias_factor;
+  components.sigma_162_sampling = components.sigma_162 * components.cross_section_bias_factor;
   components.sigma_675_sampling = components.sigma_675 * components.cross_section_bias_factor;
-  components.sigma_165_directdecay_sampling = components.sigma_165_directdecay * components.cross_section_bias_factor;
+  components.sigma_162_directdecay_sampling = components.sigma_162_directdecay * components.cross_section_bias_factor;
   components.sigma_675_directdecay_sampling = components.sigma_675_directdecay * components.cross_section_bias_factor;
   components.sigma_directdecay_sampling = components.sigma_directdecay * components.cross_section_bias_factor;
   components.sigma_background_sampling = components.sigma_directdecay_sampling;
   components.sigma_3alpha_sampling_total =
-    components.sigma_165_sampling + components.sigma_675_sampling + components.sigma_directdecay_sampling;
+    components.sigma_162_sampling + components.sigma_675_sampling + components.sigma_directdecay_sampling;
 
-  if (H11BConfig::Get165GammaCaptureEnabled()) {
-    components.sigma_gamma_165_0_physical = Get165Gamma0CrossSection(energy_cm_keV) * cm2;
-    components.sigma_gamma_165_1_physical = Get165Gamma1CrossSection(energy_cm_keV) * cm2;
-    components.sigma_gamma_165_total = components.sigma_gamma_165_0_physical + components.sigma_gamma_165_1_physical;
+  if (H11BConfig::Get162GammaCaptureEnabled()) {
+    components.sigma_gamma_162_0_physical = Get162Gamma0CrossSection(energy_cm_keV) * cm2;
+    components.sigma_gamma_162_1_physical = Get162Gamma1CrossSection(energy_cm_keV) * cm2;
+    components.sigma_gamma_162_total = components.sigma_gamma_162_0_physical + components.sigma_gamma_162_1_physical;
   }
 
   if (H11BConfig::Get675GammaCaptureEnabled()) {
@@ -127,25 +127,25 @@ H11BCrossSectionComponents H11BCrossSection::CalculateComponents(G4double kineti
     Fill675GammaPhysicalBranches(components);
   }
 
-  components.sigma_gamma_total_physical = components.sigma_gamma_165_total + components.sigma_gamma_675_physical;
+  components.sigma_gamma_total_physical = components.sigma_gamma_162_total + components.sigma_gamma_675_physical;
 
   // Backward-compatible aliases.  These are physical cross sections.
-  components.sigma_gamma_165_0 = components.sigma_gamma_165_0_physical;
-  components.sigma_gamma_165_1 = components.sigma_gamma_165_1_physical;
+  components.sigma_gamma_162_0 = components.sigma_gamma_162_0_physical;
+  components.sigma_gamma_162_1 = components.sigma_gamma_162_1_physical;
   components.sigma_gamma_675_total = components.sigma_gamma_675_physical;
   components.sigma_gamma_total = components.sigma_gamma_total_physical;
 
   const G4double bias_factor = H11BConfig::GetGammaBiasFactor();
   const G4double total_bias_factor = bias_factor * components.cross_section_bias_factor;
-  components.sigma_gamma_165_0_sampling = components.sigma_gamma_165_0_physical * total_bias_factor;
-  components.sigma_gamma_165_1_sampling = components.sigma_gamma_165_1_physical * total_bias_factor;
+  components.sigma_gamma_162_0_sampling = components.sigma_gamma_162_0_physical * total_bias_factor;
+  components.sigma_gamma_162_1_sampling = components.sigma_gamma_162_1_physical * total_bias_factor;
   components.sigma_gamma_675_sampling = components.sigma_gamma_675_physical * total_bias_factor;
   components.sigma_gamma_675_to_ground_sampling = components.sigma_gamma_675_to_ground_physical * total_bias_factor;
   components.sigma_gamma_675_to_4439_sampling = components.sigma_gamma_675_to_4439_physical * total_bias_factor;
   components.sigma_gamma_675_to_7654_sampling = components.sigma_gamma_675_to_7654_physical * total_bias_factor;
   components.sigma_gamma_675_to_12710_sampling = components.sigma_gamma_675_to_12710_physical * total_bias_factor;
   components.sigma_gamma_675_to_15110_sampling = components.sigma_gamma_675_to_15110_physical * total_bias_factor;
-  components.sigma_gamma_sampling_total = components.sigma_gamma_165_0_sampling + components.sigma_gamma_165_1_sampling + components.sigma_gamma_675_sampling;
+  components.sigma_gamma_sampling_total = components.sigma_gamma_162_0_sampling + components.sigma_gamma_162_1_sampling + components.sigma_gamma_675_sampling;
 
   components.sigma_total_physical_all = components.sigma_total + components.sigma_gamma_total_physical;
   components.sigma_total_sampling_all = components.sigma_3alpha_sampling_total + components.sigma_gamma_sampling_total;
@@ -171,20 +171,20 @@ void H11BCrossSection::SetCrossSectionBiasFactor(G4double factor)
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double H11BCrossSection::Get165SequentialDecayFraction()
+G4double H11BCrossSection::Get162SequentialDecayFraction()
 {
-  return g_165_sequential_decay_fraction;
+  return g_162_sequential_decay_fraction;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void H11BCrossSection::Set165SequentialDecayFraction(G4double fraction)
+void H11BCrossSection::Set162SequentialDecayFraction(G4double fraction)
 {
   if (!std::isfinite(fraction) || fraction < 0.0 || fraction > 1.0) {
-    G4cerr << "Invalid /h11b/165SequentialDecayFraction " << fraction << ". Use a finite value in [0, 1]." << G4endl;
+    G4cerr << "Invalid /h11b/162SequentialDecayFraction " << fraction << ". Use a finite value in [0, 1]." << G4endl;
     return;
   }
 
-  g_165_sequential_decay_fraction = fraction;
+  g_162_sequential_decay_fraction = fraction;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -217,20 +217,20 @@ void H11BCrossSection::SetDirectDecayEnabled(G4bool enabled)
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double H11BCrossSection::Get165BWScaleFactor()
+G4double H11BCrossSection::Get162BWScaleFactor()
 {
-  return g_165_bw_scale_factor;
+  return g_162_bw_scale_factor;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void H11BCrossSection::Set165BWScaleFactor(G4double factor)
+void H11BCrossSection::Set162BWScaleFactor(G4double factor)
 {
   if (!std::isfinite(factor) || factor < 0.0) {
-    G4cerr << "Invalid /h11b/165BWScaleFactor " << factor << ". Use a finite value >= 0." << G4endl;
+    G4cerr << "Invalid /h11b/162BWScaleFactor " << factor << ". Use a finite value >= 0." << G4endl;
     return;
   }
 
-  g_165_bw_scale_factor = factor;
+  g_162_bw_scale_factor = factor;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -257,32 +257,32 @@ G4double H11BCrossSection::GetEcmValue(G4double project_a, G4double target_a, G4
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double H11BCrossSection::GetSigma165(G4double ecm)
+G4double H11BCrossSection::GetSigma162(G4double ecm)
 {
   if (ecm < 1.) return 0.;
 
-  G4double exit_width = H11B165Alpha0Width / keV + H11B165Alpha1Width / keV;
+  G4double exit_width = H11B162Alpha0Width / keV + H11B162Alpha1Width / keV;
   if (H11BIncludeGammaChannelInCrossSection) {
-    exit_width += H11B165GammaWidth / keV;
+    exit_width += H11B162GammaWidth / keV;
   }
 
-  return GetSigmaBreitWigner(ecm, H11B165ResonanceEnergy / keV, H11B165TotalWidth / keV, H11B165ProtonWidth / keV, exit_width, H11B165SpinStatFactor, H11B165EntranceOrbitalL);
+  return GetSigmaBreitWigner(ecm, H11B162ResonanceEnergy / keV, H11B162TotalWidth / keV, H11B162ProtonWidth / keV, exit_width, H11B162SpinStatFactor, H11B162EntranceOrbitalL);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double H11BCrossSection::Get165Gamma0CrossSection(G4double ecm)
+G4double H11BCrossSection::Get162Gamma0CrossSection(G4double ecm)
 {
   if (ecm < 1. || ecm > 400.) return 0.;
 
-  return GetSigmaBreitWigner(ecm, H11B165ResonanceEnergy / keV, H11B165TotalWidth / keV, H11B165ProtonWidth / keV, H11B165Gamma0Width / keV, H11B165SpinStatFactor, H11B165EntranceOrbitalL);
+  return GetSigmaBreitWigner(ecm, H11B162ResonanceEnergy / keV, H11B162TotalWidth / keV, H11B162ProtonWidth / keV, H11B162Gamma0Width / keV, H11B162SpinStatFactor, H11B162EntranceOrbitalL);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double H11BCrossSection::Get165Gamma1CrossSection(G4double ecm)
+G4double H11BCrossSection::Get162Gamma1CrossSection(G4double ecm)
 {
   if (ecm < 1. || ecm > 400.) return 0.;
 
-  return GetSigmaBreitWigner(ecm, H11B165ResonanceEnergy / keV, H11B165TotalWidth / keV, H11B165ProtonWidth / keV, H11B165Gamma1Width / keV, H11B165SpinStatFactor, H11B165EntranceOrbitalL);
+  return GetSigmaBreitWigner(ecm, H11B162ResonanceEnergy / keV, H11B162TotalWidth / keV, H11B162ProtonWidth / keV, H11B162Gamma1Width / keV, H11B162SpinStatFactor, H11B162EntranceOrbitalL);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

@@ -8,18 +8,18 @@
 #include <utility>
 
 namespace H11BConfig {
-G4bool GetEnable165PrimaryAngularDistribution();
-void SetEnable165PrimaryAngularDistribution(G4bool enabled);
-void Set165PrimaryAngularA1(G4double value);
-void Set165PrimaryAngularA2(G4double value);
-G4double Get165PrimaryAngularA1();
-G4double Get165PrimaryAngularA2();
+G4bool GetEnable162PrimaryAngularDistribution();
+void SetEnable162PrimaryAngularDistribution(G4bool enabled);
+void Set162PrimaryAngularA1(G4double value);
+void Set162PrimaryAngularA2(G4double value);
+G4double Get162PrimaryAngularA1();
+G4double Get162PrimaryAngularA2();
 // alpha0-channel primary coefficients (distinct from the alpha1 values above)
-void Set165PrimaryAlpha0AngularA1(G4double value);
-void Set165PrimaryAlpha0AngularA2(G4double value);
-G4double Get165PrimaryAlpha0AngularA1();
-G4double Get165PrimaryAlpha0AngularA2();
-std::pair<G4double, G4double> Get165PrimaryA1A2(G4bool alpha1_branch);
+void Set162PrimaryAlpha0AngularA1(G4double value);
+void Set162PrimaryAlpha0AngularA2(G4double value);
+G4double Get162PrimaryAlpha0AngularA1();
+G4double Get162PrimaryAlpha0AngularA2();
+std::pair<G4double, G4double> Get162PrimaryA1A2(G4bool alpha1_branch);
 
 G4bool GetEnable675PrimaryAngularDistribution();
 void SetEnable675PrimaryAngularDistribution(G4bool enabled);
@@ -28,13 +28,13 @@ void Set675PrimaryAngularA2(G4double value);
 G4double Get675PrimaryAngularA1();
 G4double Get675PrimaryAngularA2();
 
-G4bool GetEnable165Alpha1SecondaryAngularCorrelation();
-void SetEnable165Alpha1SecondaryAngularCorrelation(G4bool enabled);
-const char* Get165Alpha1SecondaryAngularCorrelationName();
-void Set165Alpha1SecondaryA2(G4double value);
-void Set165Alpha1SecondaryA4(G4double value);
-G4double Get165Alpha1SecondaryA2();
-G4double Get165Alpha1SecondaryA4();
+G4bool GetEnable162Alpha1SecondaryAngularCorrelation();
+void SetEnable162Alpha1SecondaryAngularCorrelation(G4bool enabled);
+const char* Get162Alpha1SecondaryAngularCorrelationName();
+void Set162Alpha1SecondaryA2(G4double value);
+void Set162Alpha1SecondaryA4(G4double value);
+G4double Get162Alpha1SecondaryA2();
+G4double Get162Alpha1SecondaryA4();
 
 G4bool GetEnable675Alpha1SecondaryAngularCorrelation();
 void SetEnable675Alpha1SecondaryAngularCorrelation(G4bool enabled);
@@ -67,14 +67,14 @@ void Set675StrictWeightMaxScanCandidates(G4int value);
 G4int Get675StrictMaxSamplingAttempts();
 void Set675StrictMaxSamplingAttempts(G4int value);
 
-G4bool GetEnable165Gamma0AngularDistribution();
-void SetEnable165Gamma0AngularDistribution(G4bool enabled);
-const char* Get165Gamma0AngularDistributionName();
-H11BGammaAngularMode Get165Gamma0AngularModeForOutput();
-void Set165Gamma0AngularA1(G4double value);
-void Set165Gamma0AngularA2(G4double value);
-G4double Get165Gamma0AngularA1();
-G4double Get165Gamma0AngularA2();
+G4bool GetEnable162Gamma0AngularDistribution();
+void SetEnable162Gamma0AngularDistribution(G4bool enabled);
+const char* Get162Gamma0AngularDistributionName();
+H11BGammaAngularMode Get162Gamma0AngularModeForOutput();
+void Set162Gamma0AngularA1(G4double value);
+void Set162Gamma0AngularA2(G4double value);
+G4double Get162Gamma0AngularA1();
+G4double Get162Gamma0AngularA2();
 
 G4bool GetEnable675GammaAngularDistribution();
 void SetEnable675GammaAngularDistribution(G4bool enabled);
@@ -85,8 +85,8 @@ void Set675GammaAngularA2(G4double value);
 G4double Get675GammaAngularA1();
 G4double Get675GammaAngularA2();
 
-G4bool Get165GammaCaptureEnabled();
-void Set165GammaCaptureEnabled(G4bool enabled);
+G4bool Get162GammaCaptureEnabled();
+void Set162GammaCaptureEnabled(G4bool enabled);
 
 G4bool Get675GammaCaptureEnabled();
 void Set675GammaCaptureEnabled(G4bool enabled);

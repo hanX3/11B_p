@@ -2,18 +2,18 @@
 set -euo pipefail
 
 # Usage:
-#   ./batch.sh [threads] [macro]
+#   ./batch.sh [macro] [threads]
 #
 # Examples:
 #   ./batch.sh
-#   ./batch.sh 10 macros/run.mac
-#   ./batch.sh 10 ../validation_angle_distribution/validation_angle_165_primary_off.mac
+#   ./batch.sh macros/run.mac 10
+#   ./batch.sh ../validation_angle_distribution/validation_angle_162_primary_off.mac 10
 #
 # The script can be launched either from the project root or from build/.
 # It always writes and merges ROOT output under the project-local data/ directory.
 
-THREADS="${1:-4}"
-MACRO_ARG="${2:-macros/run.mac}"
+MACRO_ARG="${1:-macros/run.mac}"
+THREADS="${2:-4}"
 CALL_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -77,7 +77,7 @@ resolve_macro_path() {
 
 if ! [[ "${THREADS}" =~ ^[0-9]+$ ]] || [[ "${THREADS}" -lt 1 ]]; then
   echo "ERROR: threads must be a positive integer."
-  echo "Usage: $0 [threads] [macro]"
+  echo "Usage: $0 [macro] [threads]"
   exit 2
 fi
 
@@ -201,7 +201,7 @@ merge_class() {
   echo "Output: ${out_file}"
   hadd -f "${out_file}" "${files[@]}"
 
-  if [[ "${CLEAN_THREADS:-0}" == "1" ]]; then
+  if [[ "${CLEAN_THREADS:-1}" == "1" ]]; then
     echo "CLEAN_THREADS=1, deleting ${class_name} thread files:"
     printf '  %s\n' "${files[@]}"
     rm -f "${files[@]}"

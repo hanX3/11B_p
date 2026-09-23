@@ -113,9 +113,9 @@ G4double FindLegendreA1A2Maximum(G4double a1, G4double a2)
     const G4double w = H11BAngularDistribution::WeightLegendreA1A2(x, a1, a2);
     if (w < 0.0) {
       G4Exception("H11BAngularDistribution::FindLegendreA1A2Maximum",
-                  "H11B165PrimaryAngular001",
+                  "H11B162PrimaryAngular001",
                   FatalException,
-                  "165-keV primary alpha angular distribution has negative weight.");
+                  "162-keV primary alpha angular distribution has negative weight.");
     }
     max_weight = std::max(max_weight, w);
   }
@@ -131,9 +131,9 @@ G4double SampleCosThetaLegendreA1A2(G4double a1, G4double a2, G4double w_max)
     const G4double w = H11BAngularDistribution::WeightLegendreA1A2(x, a1, a2);
     if (w < 0.0) {
       G4Exception("H11BAngularDistribution::SampleCosThetaLegendreA1A2",
-                  "H11B165PrimaryAngular001",
+                  "H11B162PrimaryAngular001",
                   FatalException,
-                  "165-keV primary alpha angular distribution has negative weight.");
+                  "162-keV primary alpha angular distribution has negative weight.");
     }
 
     if (G4UniformRand() * w_max <= w) {
@@ -203,33 +203,33 @@ G4ThreeVector SampleDirectionFromLegendreA2A4(const G4ThreeVector& axis, G4doubl
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::pair<G4double, G4double> Get165PrimaryA1A2(G4double ecm_keV, G4bool alpha1_branch)
+std::pair<G4double, G4double> Get162PrimaryA1A2(G4double ecm_keV, G4bool alpha1_branch)
 {
   (void)ecm_keV;
 
-  if (!H11BConfig::GetEnable165PrimaryAngularDistribution()) {
+  if (!H11BConfig::GetEnable162PrimaryAngularDistribution()) {
     return {0.0, 0.0};
   }
 
-  return H11BConfig::Get165PrimaryA1A2(alpha1_branch);
+  return H11BConfig::Get162PrimaryA1A2(alpha1_branch);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 G4ThreeVector
-Sample165PrimaryAlphaDirection(const G4ThreeVector& beam_axis_cm12c, G4bool alpha1_branch, G4double ecm_keV)
+Sample162PrimaryAlphaDirection(const G4ThreeVector& beam_axis_cm12c, G4bool alpha1_branch, G4double ecm_keV)
 {
   if (beam_axis_cm12c.mag2() <= 0.0 ||
-      !H11BConfig::GetEnable165PrimaryAngularDistribution()) {
+      !H11BConfig::GetEnable162PrimaryAngularDistribution()) {
     return SampleIsotropicDirection();
   }
 
-  const auto [a1, a2] = Get165PrimaryA1A2(ecm_keV, alpha1_branch);
+  const auto [a1, a2] = Get162PrimaryA1A2(ecm_keV, alpha1_branch);
 
   return SampleDirectionFromLegendreA1A2(beam_axis_cm12c, a1, a2);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double Weight165Alpha1DWave(G4double x)
+G4double Weight162Alpha1DWave(G4double x)
 {
   const G4double x2 = x * x;
   const G4double x4 = x2 * x2;
@@ -274,16 +274,16 @@ G4double Weight675Alpha1LegendreA2A4(G4double x)
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double Weight165Gamma0FixedA1A2(G4double x)
+G4double Weight162Gamma0FixedA1A2(G4double x)
 {
-  return WeightLegendreA1A2(x, H11BConfig::Get165Gamma0AngularA1(), H11BConfig::Get165Gamma0AngularA2());
+  return WeightLegendreA1A2(x, H11BConfig::Get162Gamma0AngularA1(), H11BConfig::Get162Gamma0AngularA2());
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4ThreeVector Sample165Alpha1DWaveDirection(const G4ThreeVector& primary_alpha_dir_cm12c)
+G4ThreeVector Sample162Alpha1DWaveDirection(const G4ThreeVector& primary_alpha_dir_cm12c)
 {
-  static const G4double w_max = FindWeightMaximum(Weight165Alpha1DWave);
-  const G4double cos_chi = SampleCosChi(Weight165Alpha1DWave, w_max);
+  static const G4double w_max = FindWeightMaximum(Weight162Alpha1DWave);
+  const G4double cos_chi = SampleCosChi(Weight162Alpha1DWave, w_max);
   return DirectionFromCosChi(primary_alpha_dir_cm12c, cos_chi);
 }
 
@@ -296,10 +296,10 @@ G4ThreeVector Sample675Alpha1LegendreA2A4Direction(const G4ThreeVector& axis_8be
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4ThreeVector Sample165Gamma0FixedA1A2Direction(const G4ThreeVector& beam_axis_cm12c)
+G4ThreeVector Sample162Gamma0FixedA1A2Direction(const G4ThreeVector& beam_axis_cm12c)
 {
-  const G4double w_max = FindWeightMaximum(Weight165Gamma0FixedA1A2);
-  const G4double cos_theta = SampleCosChi(Weight165Gamma0FixedA1A2, w_max);
+  const G4double w_max = FindWeightMaximum(Weight162Gamma0FixedA1A2);
+  const G4double cos_theta = SampleCosChi(Weight162Gamma0FixedA1A2, w_max);
   return DirectionFromCosChi(beam_axis_cm12c, cos_theta);
 }
 

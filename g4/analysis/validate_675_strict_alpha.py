@@ -43,7 +43,7 @@ REQUIRED_FIELDS = [
     "h11b675_strict_weight_max",
     "h11b675_strict_sampling_attempts",
     "sigma_eval_b",
-    "sigma_165_used_b",
+    "sigma_162_used_b",
     "sigma_675_used_b",
     "sigma_directdecay_b",
     "sigma_total_used_b",
@@ -55,7 +55,7 @@ MODEL_NAMES = {
 }
 
 CHANNEL_NAMES = {
-    0: "n_165_alpha",
+    0: "n_162_alpha",
     1: "n_675_alpha",
     2: "n_directdecay",
     3: "n_gamma",
@@ -258,9 +258,9 @@ def validate_file(path: Path, backend: str) -> int:
     ):
         print(f"  {field} outside [0,pi] = {count_outside(data[field][alpha675], 0.0, math.pi)}")
 
-    sigma_sum = data["sigma_165_used_b"] + data["sigma_675_used_b"] + data["sigma_directdecay_b"]
+    sigma_sum = data["sigma_162_used_b"] + data["sigma_675_used_b"] + data["sigma_directdecay_b"]
     diff = np.abs(data["sigma_total_used_b"] - sigma_sum)
-    print(f"  max |sigma_total_used - (sigma_165 + sigma_675 + sigma_directdecay)| = {float(np.nanmax(diff)):.12g}")
+    print(f"  max |sigma_total_used - (sigma_162 + sigma_675 + sigma_directdecay)| = {float(np.nanmax(diff)):.12g}")
     if np.nanmax(diff) > 1.0e-9:
         status = 1
 

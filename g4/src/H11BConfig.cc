@@ -9,19 +9,19 @@
 #include <utility>
 
 namespace {
-G4bool g_enable_165_primary_angular_distribution = H11BDefaultEnable165PrimaryAngularDistribution;
-G4double g_165_primary_a1 = H11BDefault165PrimaryAngularA1;
-G4double g_165_primary_a2 = H11BDefault165PrimaryAngularA2;
-G4double g_165_primary_a0_a1 = H11BDefault165PrimaryAlpha0AngularA1;
-G4double g_165_primary_a0_a2 = H11BDefault165PrimaryAlpha0AngularA2;
+G4bool g_enable_162_primary_angular_distribution = H11BDefaultEnable162PrimaryAngularDistribution;
+G4double g_162_primary_a1 = H11BDefault162PrimaryAngularA1;
+G4double g_162_primary_a2 = H11BDefault162PrimaryAngularA2;
+G4double g_162_primary_a0_a1 = H11BDefault162PrimaryAlpha0AngularA1;
+G4double g_162_primary_a0_a2 = H11BDefault162PrimaryAlpha0AngularA2;
 
 G4bool g_enable_675_primary_angular_distribution = H11BDefaultEnable675PrimaryAngularDistribution;
 G4double g_675_primary_a1 = H11BDefault675PrimaryAngularA1;
 G4double g_675_primary_a2 = H11BDefault675PrimaryAngularA2;
 
-G4bool g_enable_165_alpha1_secondary_angular_correlation = H11BDefaultEnable165Alpha1SecondaryAngularCorrelation;
-G4double g_165_alpha1_secondary_a2 = H11BDefault165Alpha1SecondaryA2;
-G4double g_165_alpha1_secondary_a4 = H11BDefault165Alpha1SecondaryA4;
+G4bool g_enable_162_alpha1_secondary_angular_correlation = H11BDefaultEnable162Alpha1SecondaryAngularCorrelation;
+G4double g_162_alpha1_secondary_a2 = H11BDefault162Alpha1SecondaryA2;
+G4double g_162_alpha1_secondary_a4 = H11BDefault162Alpha1SecondaryA4;
 G4bool g_enable_675_alpha1_secondary_angular_correlation = H11BDefaultEnable675Alpha1SecondaryAngularCorrelation;
 G4double g_675_alpha1_secondary_a2 = H11BDefault675Alpha1SecondaryA2;
 G4double g_675_alpha1_secondary_a4 = H11BDefault675Alpha1SecondaryA4;
@@ -37,13 +37,13 @@ G4double g_675_strict_weight_max_safety_factor = H11B675StrictDefaultWeightMaxSa
 G4int g_675_strict_weight_max_scan_candidates = H11B675StrictDefaultWeightMaxScanCandidates;
 G4int g_675_strict_max_sampling_attempts = H11B675StrictDefaultMaxSamplingAttempts;
 
-G4bool g_enable_165_gamma0_angular_distribution = H11BDefaultEnable165Gamma0AngularDistribution;
-G4double g_165_gamma0_a1 = H11B165Gamma0AngularA1Default;
-G4double g_165_gamma0_a2 = H11B165Gamma0AngularA2Default;
+G4bool g_enable_162_gamma0_angular_distribution = H11BDefaultEnable162Gamma0AngularDistribution;
+G4double g_162_gamma0_a1 = H11B162Gamma0AngularA1Default;
+G4double g_162_gamma0_a2 = H11B162Gamma0AngularA2Default;
 G4bool g_enable_675_gamma_angular_distribution = H11BDefaultEnable675GammaAngularDistribution;
 G4double g_675_gamma_a1 = H11B675GammaAngularA1Default;
 G4double g_675_gamma_a2 = H11B675GammaAngularA2Default;
-G4bool g_enable_165_gamma_capture = H11BDefault165GammaCaptureEnabled;
+G4bool g_enable_162_gamma_capture = H11BDefault162GammaCaptureEnabled;
 G4bool g_enable_675_gamma_capture = H11BDefault675GammaCaptureEnabled;
 G4double g_gamma_bias_factor = H11BDefaultGammaBiasFactor;
 
@@ -90,20 +90,20 @@ void ValidatePrimaryAngularDistribution(const char* where, const char* code, con
   }
 }
 
-void Validate165PrimaryAngularDistribution()
+void Validate162PrimaryAngularDistribution()
 {
-  ValidatePrimaryAngularDistribution("H11BConfig::Validate165PrimaryAngularDistribution",
-                                     "H11B165PrimaryAngular001",
-                                     "165-keV primary alpha1 angular distribution has negative weight.",
-                                     g_enable_165_primary_angular_distribution,
-                                     g_165_primary_a1,
-                                     g_165_primary_a2);
-  ValidatePrimaryAngularDistribution("H11BConfig::Validate165PrimaryAngularDistribution",
-                                     "H11B165PrimaryAngular002",
-                                     "165-keV primary alpha0 angular distribution has negative weight.",
-                                     g_enable_165_primary_angular_distribution,
-                                     g_165_primary_a0_a1,
-                                     g_165_primary_a0_a2);
+  ValidatePrimaryAngularDistribution("H11BConfig::Validate162PrimaryAngularDistribution",
+                                     "H11B162PrimaryAngular001",
+                                     "162-keV primary alpha1 angular distribution has negative weight.",
+                                     g_enable_162_primary_angular_distribution,
+                                     g_162_primary_a1,
+                                     g_162_primary_a2);
+  ValidatePrimaryAngularDistribution("H11BConfig::Validate162PrimaryAngularDistribution",
+                                     "H11B162PrimaryAngular002",
+                                     "162-keV primary alpha0 angular distribution has negative weight.",
+                                     g_enable_162_primary_angular_distribution,
+                                     g_162_primary_a0_a1,
+                                     g_162_primary_a0_a2);
 }
 
 void Validate675PrimaryAngularDistribution()
@@ -116,14 +116,14 @@ void Validate675PrimaryAngularDistribution()
                                      g_675_primary_a2);
 }
 
-void Validate165Gamma0AngularDistribution()
+void Validate162Gamma0AngularDistribution()
 {
-  ValidatePrimaryAngularDistribution("H11BConfig::Validate165Gamma0AngularDistribution",
-                                     "H11B165Gamma0Angular001",
-                                     "165-keV gamma0 angular distribution has negative weight.",
-                                     g_enable_165_gamma0_angular_distribution,
-                                     g_165_gamma0_a1,
-                                     g_165_gamma0_a2);
+  ValidatePrimaryAngularDistribution("H11BConfig::Validate162Gamma0AngularDistribution",
+                                     "H11B162Gamma0Angular001",
+                                     "162-keV gamma0 angular distribution has negative weight.",
+                                     g_enable_162_gamma0_angular_distribution,
+                                     g_162_gamma0_a1,
+                                     g_162_gamma0_a2);
 }
 
 void Validate675GammaAngularDistribution()
@@ -156,17 +156,17 @@ void ValidateLegendreA2A4(const char* where, const char* code, const char* messa
   }
 }
 
-void Validate165Alpha1SecondaryAngularDistribution()
+void Validate162Alpha1SecondaryAngularDistribution()
 {
-  if (!g_enable_165_alpha1_secondary_angular_correlation) {
+  if (!g_enable_162_alpha1_secondary_angular_correlation) {
     return;
   }
 
-  ValidateLegendreA2A4("H11BConfig::Validate165Alpha1SecondaryAngularDistribution",
-                       "H11B165Alpha1Secondary001",
-                       "165-keV alpha1 secondary angular correlation has negative weight.",
-                       g_165_alpha1_secondary_a2,
-                       g_165_alpha1_secondary_a4);
+  ValidateLegendreA2A4("H11BConfig::Validate162Alpha1SecondaryAngularDistribution",
+                       "H11B162Alpha1Secondary001",
+                       "162-keV alpha1 secondary angular correlation has negative weight.",
+                       g_162_alpha1_secondary_a2,
+                       g_162_alpha1_secondary_a4);
 }
 
 void Validate675Alpha1SecondaryAngularDistribution()
@@ -184,69 +184,69 @@ void Validate675Alpha1SecondaryAngularDistribution()
 } // namespace
 
 namespace H11BConfig {
-G4bool GetEnable165PrimaryAngularDistribution()
+G4bool GetEnable162PrimaryAngularDistribution()
 {
-  return g_enable_165_primary_angular_distribution;
+  return g_enable_162_primary_angular_distribution;
 }
 
-void SetEnable165PrimaryAngularDistribution(G4bool enabled)
+void SetEnable162PrimaryAngularDistribution(G4bool enabled)
 {
-  g_enable_165_primary_angular_distribution = enabled;
-  Validate165PrimaryAngularDistribution();
+  g_enable_162_primary_angular_distribution = enabled;
+  Validate162PrimaryAngularDistribution();
 }
 
-void Set165PrimaryAngularA1(G4double value)
+void Set162PrimaryAngularA1(G4double value)
 {
-  g_165_primary_a1 = value;
-  Validate165PrimaryAngularDistribution();
+  g_162_primary_a1 = value;
+  Validate162PrimaryAngularDistribution();
 }
 
-void Set165PrimaryAngularA2(G4double value)
+void Set162PrimaryAngularA2(G4double value)
 {
-  g_165_primary_a2 = value;
-  Validate165PrimaryAngularDistribution();
+  g_162_primary_a2 = value;
+  Validate162PrimaryAngularDistribution();
 }
 
-G4double Get165PrimaryAngularA1()
+G4double Get162PrimaryAngularA1()
 {
-  return g_165_primary_a1;
+  return g_162_primary_a1;
 }
 
-G4double Get165PrimaryAngularA2()
+G4double Get162PrimaryAngularA2()
 {
-  return g_165_primary_a2;
+  return g_162_primary_a2;
 }
 
-void Set165PrimaryAlpha0AngularA1(G4double value)
+void Set162PrimaryAlpha0AngularA1(G4double value)
 {
-  g_165_primary_a0_a1 = value;
-  Validate165PrimaryAngularDistribution();
+  g_162_primary_a0_a1 = value;
+  Validate162PrimaryAngularDistribution();
 }
 
-void Set165PrimaryAlpha0AngularA2(G4double value)
+void Set162PrimaryAlpha0AngularA2(G4double value)
 {
-  g_165_primary_a0_a2 = value;
-  Validate165PrimaryAngularDistribution();
+  g_162_primary_a0_a2 = value;
+  Validate162PrimaryAngularDistribution();
 }
 
-G4double Get165PrimaryAlpha0AngularA1()
+G4double Get162PrimaryAlpha0AngularA1()
 {
-  return g_165_primary_a0_a1;
+  return g_162_primary_a0_a1;
 }
 
-G4double Get165PrimaryAlpha0AngularA2()
+G4double Get162PrimaryAlpha0AngularA2()
 {
-  return g_165_primary_a0_a2;
+  return g_162_primary_a0_a2;
 }
 
-std::pair<G4double, G4double> Get165PrimaryA1A2(G4bool alpha1_branch)
+std::pair<G4double, G4double> Get162PrimaryA1A2(G4bool alpha1_branch)
 {
   // alpha1 -> 8Be(2+): isotropic coefficients (Spraker 2012).
   // alpha0 -> 8Be(g.s.): Becker 1987 Fig.10 coefficients.
   if (alpha1_branch) {
-    return {g_165_primary_a1, g_165_primary_a2};
+    return {g_162_primary_a1, g_162_primary_a2};
   }
-  return {g_165_primary_a0_a1, g_165_primary_a0_a2};
+  return {g_162_primary_a0_a1, g_162_primary_a0_a2};
 }
 
 G4bool GetEnable675PrimaryAngularDistribution()
@@ -282,42 +282,42 @@ G4double Get675PrimaryAngularA2()
   return g_675_primary_a2;
 }
 
-G4bool GetEnable165Alpha1SecondaryAngularCorrelation()
+G4bool GetEnable162Alpha1SecondaryAngularCorrelation()
 {
-  return g_enable_165_alpha1_secondary_angular_correlation;
+  return g_enable_162_alpha1_secondary_angular_correlation;
 }
 
-void SetEnable165Alpha1SecondaryAngularCorrelation(G4bool enabled)
+void SetEnable162Alpha1SecondaryAngularCorrelation(G4bool enabled)
 {
-  g_enable_165_alpha1_secondary_angular_correlation = enabled;
-  Validate165Alpha1SecondaryAngularDistribution();
+  g_enable_162_alpha1_secondary_angular_correlation = enabled;
+  Validate162Alpha1SecondaryAngularDistribution();
 }
 
-const char* Get165Alpha1SecondaryAngularCorrelationName()
+const char* Get162Alpha1SecondaryAngularCorrelationName()
 {
-  return g_enable_165_alpha1_secondary_angular_correlation ? "legendreA2A4" : "isotropic";
+  return g_enable_162_alpha1_secondary_angular_correlation ? "legendreA2A4" : "isotropic";
 }
 
-void Set165Alpha1SecondaryA2(G4double value)
+void Set162Alpha1SecondaryA2(G4double value)
 {
-  g_165_alpha1_secondary_a2 = value;
-  Validate165Alpha1SecondaryAngularDistribution();
+  g_162_alpha1_secondary_a2 = value;
+  Validate162Alpha1SecondaryAngularDistribution();
 }
 
-void Set165Alpha1SecondaryA4(G4double value)
+void Set162Alpha1SecondaryA4(G4double value)
 {
-  g_165_alpha1_secondary_a4 = value;
-  Validate165Alpha1SecondaryAngularDistribution();
+  g_162_alpha1_secondary_a4 = value;
+  Validate162Alpha1SecondaryAngularDistribution();
 }
 
-G4double Get165Alpha1SecondaryA2()
+G4double Get162Alpha1SecondaryA2()
 {
-  return g_165_alpha1_secondary_a2;
+  return g_162_alpha1_secondary_a2;
 }
 
-G4double Get165Alpha1SecondaryA4()
+G4double Get162Alpha1SecondaryA4()
 {
-  return g_165_alpha1_secondary_a4;
+  return g_162_alpha1_secondary_a4;
 }
 
 G4bool GetEnable675Alpha1SecondaryAngularCorrelation()
@@ -514,47 +514,47 @@ void Set675StrictMaxSamplingAttempts(G4int value)
   g_675_strict_max_sampling_attempts = value;
 }
 
-G4bool GetEnable165Gamma0AngularDistribution()
+G4bool GetEnable162Gamma0AngularDistribution()
 {
-  return g_enable_165_gamma0_angular_distribution;
+  return g_enable_162_gamma0_angular_distribution;
 }
 
-void SetEnable165Gamma0AngularDistribution(G4bool enabled)
+void SetEnable162Gamma0AngularDistribution(G4bool enabled)
 {
-  g_enable_165_gamma0_angular_distribution = enabled;
-  Validate165Gamma0AngularDistribution();
+  g_enable_162_gamma0_angular_distribution = enabled;
+  Validate162Gamma0AngularDistribution();
 }
 
-const char* Get165Gamma0AngularDistributionName()
+const char* Get162Gamma0AngularDistributionName()
 {
-  return g_enable_165_gamma0_angular_distribution ? "fixedA1A2" : "isotropic";
+  return g_enable_162_gamma0_angular_distribution ? "fixedA1A2" : "isotropic";
 }
 
-H11BGammaAngularMode Get165Gamma0AngularModeForOutput()
+H11BGammaAngularMode Get162Gamma0AngularModeForOutput()
 {
-  return g_enable_165_gamma0_angular_distribution ? H11BGammaAngularMode::FixedA1A2 : H11BGammaAngularMode::Isotropic;
+  return g_enable_162_gamma0_angular_distribution ? H11BGammaAngularMode::FixedA1A2 : H11BGammaAngularMode::Isotropic;
 }
 
-void Set165Gamma0AngularA1(G4double value)
+void Set162Gamma0AngularA1(G4double value)
 {
-  g_165_gamma0_a1 = value;
-  Validate165Gamma0AngularDistribution();
+  g_162_gamma0_a1 = value;
+  Validate162Gamma0AngularDistribution();
 }
 
-void Set165Gamma0AngularA2(G4double value)
+void Set162Gamma0AngularA2(G4double value)
 {
-  g_165_gamma0_a2 = value;
-  Validate165Gamma0AngularDistribution();
+  g_162_gamma0_a2 = value;
+  Validate162Gamma0AngularDistribution();
 }
 
-G4double Get165Gamma0AngularA1()
+G4double Get162Gamma0AngularA1()
 {
-  return g_165_gamma0_a1;
+  return g_162_gamma0_a1;
 }
 
-G4double Get165Gamma0AngularA2()
+G4double Get162Gamma0AngularA2()
 {
-  return g_165_gamma0_a2;
+  return g_162_gamma0_a2;
 }
 
 G4bool GetEnable675GammaAngularDistribution()
@@ -600,14 +600,14 @@ G4double Get675GammaAngularA2()
   return g_675_gamma_a2;
 }
 
-G4bool Get165GammaCaptureEnabled()
+G4bool Get162GammaCaptureEnabled()
 {
-  return g_enable_165_gamma_capture;
+  return g_enable_162_gamma_capture;
 }
 
-void Set165GammaCaptureEnabled(G4bool enabled)
+void Set162GammaCaptureEnabled(G4bool enabled)
 {
-  g_enable_165_gamma_capture = enabled;
+  g_enable_162_gamma_capture = enabled;
 }
 
 G4bool Get675GammaCaptureEnabled()

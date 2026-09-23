@@ -17,42 +17,42 @@
 # H11B reaction model
 
 # Cross-section decomposition:
-#   165 total = 165-keV BW component, optionally scaled by 165BWScaleFactor
+#   162 total = 162-keV BW component, optionally scaled by 162BWScaleFactor
 #   675 total = fit675 component, optionally scaled by 675ScaleFactor
 #   each resonance total is split into sequential and direct-decay branches
 #   direct-decay fraction is automatically 1 - sequential-decay fraction
 /h11b/enableDirectDecay true
-/h11b/165SequentialDecayFraction 0.99
+/h11b/162SequentialDecayFraction 0.99
 /h11b/675SequentialDecayFraction 0.99
-/h11b/165BWScaleFactor 1.0
+/h11b/162BWScaleFactor 1.0
 /h11b/675ScaleFactor 1.0
 
 /h11b/crossSectionBiasFactor 1
 
-# 165-keV primary alpha angular distribution
+# 162-keV primary alpha angular distribution
 # false: isotropic diagnostic mode
 # true : use W(theta)=1+a1*P1(cos theta)+a2*P2(cos theta)
-/h11b/enable165PrimaryAngularDistribution false
-/h11b/165PrimaryAngularA1 0.0
-/h11b/165PrimaryAngularA2 0.0
+/h11b/enable162PrimaryAngularDistribution false
+/h11b/162PrimaryAngularA1 0.0
+/h11b/162PrimaryAngularA2 0.0
 
-# 165-keV alpha1 secondary alpha angular correlation
+# 162-keV alpha1 secondary alpha angular correlation
 # Treado 1972, Tp = 0.163 MeV, ignoring theta_s'' = -12 deg shift:
 # W(chi)=1+A2*P2(cos chi)+A4*P4(cos chi)
 # false: secondary alpha isotropic
 # true : use W(chi)=1+A2*P2(cos chi)+A4*P4(cos chi)
-/h11b/enable165Alpha1SecondaryAngularCorrelation true
-/h11b/165Alpha1SecondaryA2 -0.489
-/h11b/165Alpha1SecondaryA4 0.647
+/h11b/enable162Alpha1SecondaryAngularCorrelation true
+/h11b/162Alpha1SecondaryA2 -0.489
+/h11b/162Alpha1SecondaryA4 0.647
 
-# 165-keV gamma0 angular distribution
+# 162-keV gamma0 angular distribution
 # false: gamma0 isotropic
 # true : use W(theta)=1+a1*P1(cos theta)+a2*P2(cos theta).
 # The default A1/A2 values below are equivalent to the previous Craig-1956
 # A=0.19, B=0.21 form after normalization.
-/h11b/enable165Gamma0AngularDistribution true
-/h11b/165Gamma0AngularA1 -0.17757009345794392
-/h11b/165Gamma0AngularA2 0.13084112149532712
+/h11b/enable162Gamma0AngularDistribution true
+/h11b/162Gamma0AngularA1 -0.17757009345794392
+/h11b/162Gamma0AngularA2 0.13084112149532712
 
 # 675-keV primary alpha angular distribution
 # false: primary alpha isotropic
@@ -84,7 +84,7 @@
 /h11b/675StrictWeightMaxScanCandidates 2000
 /h11b/675StrictMaxSamplingAttempts 10000
 
-/h11b/enable165GammaCapture true
+/h11b/enable162GammaCapture true
 /h11b/enable675GammaCapture true
 
 # 675-keV gamma angular distribution
