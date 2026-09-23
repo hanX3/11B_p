@@ -1,0 +1,77 @@
+# =====================================================================
+# 162-keV generator-level closure sample
+#
+# Manually configured channel fractions:
+#   162seq_Be_gs     = 0.05
+#   162seq_Be2plus   = 0.90
+#   162direct        = 0.05
+#
+# Parameter conversion:
+#   sequential fraction               = 0.05 + 0.90 = 0.95
+#   alpha0 fraction within sequential  = 0.05 / 0.95
+#                                      = 0.052631578947
+#
+# This sample is pseudodata for template-fit closure.  Do not use
+# h11b_reaction_channel as a fit observable; use it only after the fit
+# to verify the recovered fractions.
+# =====================================================================
+
+# Geometry commands must be issued before /run/initialize.
+/virtualSphere/enabled true
+/virtualSphere/radius 25 mm
+/virtualSphere/thickness 1 um
+/virtualSphere/saveElectrons false
+/virtualSphere/saveOpticalPhotons false
+/virtualSphere/minKineticEnergy 0 keV
+
+# Gaussian beam at the nominal beam axis
+/beam/profile gaussian
+/beam/sigmaX 0.4247 mm
+/beam/sigmaY 0.4247 mm
+/beam/offsetX 0 mm
+/beam/offsetY 0 mm
+/beam/z 0 mm
+/beam/printConfig
+
+/target/thickness 0.12 um
+/target/backing false
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 162 keV
+
+/output/saveReaction true
+/output/saveVirtualSphere true
+/output/saveEvent false
+
+# Increase only the sampled reaction rate.
+/h11b/crossSectionBiasFactor 1000000000
+
+# Isolate the 162-keV contribution.
+/h11b/162BWScaleFactor 1.0
+/h11b/675ScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+# Mixed three-alpha decay configuration.
+/h11b/enableDirectDecay true
+/h11b/162SequentialDecayFraction 0.95
+/h11b/162Alpha0BranchingFraction 0.052631578947
+
+# Keep the same angular-physics configuration as the pure templates.
+/h11b/enable162PrimaryAngularDistribution true
+/h11b/enable162Alpha1SecondaryAngularCorrelation true
+/h11b/162Alpha1SecondaryA2 -0.489
+/h11b/162Alpha1SecondaryA4 0.647
+
+/virtualSphere/printConfig
+/output/printConfig
+/h11b/printConfig
+
+/run/beamOn 1000000

@@ -1,0 +1,95 @@
+# =====================================================================
+# detector_array_162.mac
+#
+# Purpose:
+#   - zero transverse beam spot;
+#   - generate a clean 162-keV p + 11B -> 3 alpha sample;
+#   - record outward crossings on the 25-mm virtual sphere;
+#   - write reaction, virtual_sphere, and detector event trees.
+#
+# The event tree carries the Si hit branches (si_hit_pdg, si_hit_edep_MeV,
+# si_hit_x/y/z_entry_mm, si_hit_x/y/z_edep_mm) needed by
+# plot_si_array_hit.py.
+# =====================================================================
+
+# ----------------------------------------------------------------------
+# Geometry controls: issue before /run/initialize
+# ----------------------------------------------------------------------
+
+# Point beam: zero beam-spot radius
+/beam/profile point
+/beam/offsetX 0 mm
+/beam/offsetY 0 mm
+/beam/z 0 mm
+/beam/printConfig
+
+# Thin target without backing
+/target/thickness 0.12 um
+/target/backing false
+
+# Virtual scoring sphere centred on the target
+/virtualSphere/enabled true
+/virtualSphere/radius 25 mm
+/virtualSphere/thickness 1 um
+/virtualSphere/saveElectrons false
+/virtualSphere/saveOpticalPhotons false
+/virtualSphere/minKineticEnergy 0 keV
+
+# Build geometry and physics
+/run/initialize
+
+# ----------------------------------------------------------------------
+# Runtime verbosity
+# ----------------------------------------------------------------------
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# ----------------------------------------------------------------------
+# Primary proton beam -- 162-keV resonance
+# ----------------------------------------------------------------------
+/gun/particle proton
+/gun/energy 162 keV
+/gun/direction 0 0 1
+
+# ----------------------------------------------------------------------
+# ROOT output (event tree carries the Si hits)
+# ----------------------------------------------------------------------
+/output/saveReaction true
+/output/saveEvent true
+/output/saveVirtualSphere true
+
+# ----------------------------------------------------------------------
+# Clean 162-keV sequential three-alpha sample
+# ----------------------------------------------------------------------
+/h11b/crossSectionBiasFactor 1000000000
+
+# Isolate the 162-keV contribution.
+/h11b/162BWScaleFactor 1.0
+/h11b/675ScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+# Sequential channel only; both alpha0 and alpha1 sub-branches kept.
+/h11b/enableDirectDecay false
+/h11b/162SequentialDecayFraction 1.0
+
+# Retain the configured 162-keV angular physics.
+/h11b/enable162PrimaryAngularDistribution true
+/h11b/enable162Alpha1SecondaryAngularCorrelation true
+/h11b/162Alpha1SecondaryA2 -0.489
+/h11b/162Alpha1SecondaryA4 0.647
+
+# ----------------------------------------------------------------------
+# Print effective settings
+# ----------------------------------------------------------------------
+/target/printConfig
+/virtualSphere/printConfig
+/output/printConfig
+/h11b/printConfig
+
+# ----------------------------------------------------------------------
+# Statistics
+# ----------------------------------------------------------------------
+/run/beamOn 100000

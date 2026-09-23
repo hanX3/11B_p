@@ -1,4 +1,5 @@
 #include "PrimaryGeneratorAction.hh"
+#include "BeamConfig.hh"
 #include "Constants.hh"
 #include "SiArrayConfig.hh"
 
@@ -41,25 +42,63 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* an_event)
 {
-  // Detector-commissioning mode (default off): replace the proton beam with a
-  // forward alpha source placed just downstream of the target backing so the
-  // alphas are not absorbed in the target, illuminating the forward annular
-  // DSSD.  This exercises the forward-ring hit recording and segmentation; it
-  // does not touch the 11B reaction / cross-section / decay physics.
+  // Deterministic detector-commissioning mode (default off): emit one alpha
+  // from the target centre at a macro-controlled lab direction.  This provides
+  // an unambiguous input for validating DSSD strip IDs, including backward S3.
+  if (SiArrayConfig::GetFixedAlphaTestBeam()) {
+    GenerateFixedAlphaTestPrimary(an_event);
+    return;
+  }
+
+  // Forward-cone commissioning mode retained for broad forward-S3 illumination.
   if (SiArrayConfig::GetForwardAlphaTestBeam()) {
     GenerateForwardAlphaTestPrimary(an_event);
     return;
   }
 
-  G4double r0 = BeamR * std::sqrt(G4UniformRand());
-  G4double theta = (2. * CLHEP::pi) * G4UniformRand();
-  G4double x0 = r0 * std::sin(theta);
-  G4double y0 = r0 * std::cos(theta);
-  G4double z0 = 0.;
+  G4double x0 = BeamConfig::GetOffsetX();
+  G4double y0 = BeamConfig::GetOffsetY();
 
-  particle_gun->SetParticlePosition(G4ThreeVector(x0, y0, z0));
+  switch (BeamConfig::GetProfile()) {
+  case BeamProfile::Point:
+    break;
+
+  case BeamProfile::UniformDisk: {
+    const G4double radius =
+        BeamConfig::GetRadius() * std::sqrt(G4UniformRand());
+    const G4double phi = CLHEP::twopi * G4UniformRand();
+    x0 += radius * std::cos(phi);
+    y0 += radius * std::sin(phi);
+    break;
+  }
+
+  case BeamProfile::Gaussian:
+    x0 += G4RandGauss::shoot(0., BeamConfig::GetSigmaX());
+    y0 += G4RandGauss::shoot(0., BeamConfig::GetSigmaY());
+    break;
+  }
+
+  particle_gun->SetParticlePosition(
+      G4ThreeVector(x0, y0, BeamConfig::GetZ()));
   particle_gun->SetParticleMomentumDirection(G4ThreeVector(0., 0., 1.));
 
+  particle_gun->GeneratePrimaryVertex(an_event);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void PrimaryGeneratorAction::GenerateFixedAlphaTestPrimary(G4Event* an_event)
+{
+  const G4double theta = SiArrayConfig::GetFixedAlphaTestBeamTheta();
+  const G4double phi = SiArrayConfig::GetFixedAlphaTestBeamPhi();
+  const G4double sin_theta = std::sin(theta);
+  const G4ThreeVector direction(sin_theta * std::cos(phi),
+                                sin_theta * std::sin(phi),
+                                std::cos(theta));
+
+  particle_gun->SetParticleDefinition(G4ParticleTable::GetParticleTable()->FindParticle("alpha"));
+  particle_gun->SetParticleEnergy(SiArrayConfig::GetFixedAlphaTestBeamEnergy());
+  particle_gun->SetParticlePosition(G4ThreeVector(0., 0., TargetZPos));
+  particle_gun->SetParticleMomentumDirection(direction);
   particle_gun->GeneratePrimaryVertex(an_event);
 }
 

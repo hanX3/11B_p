@@ -22,6 +22,17 @@ void SiHit::Print()
   G4cout << " detector: " << detector_id
          << " side: " << readout_side
          << " strip: " << strip_id
+         << " track: " << track_id
+         << " parent: " << parent_id
+         << " pdg: " << pdg
          << " energy dep: " << std::setw(7) << G4BestUnit(e_dep, "Energy")
-         << " first time: " << std::setw(7) << G4BestUnit(time_ns, "Time") << G4endl;
+         << " first time: " << std::setw(7) << G4BestUnit(time_ns, "Time");
+
+  if (track_id >= 0 && e_dep > 0.) {
+    G4cout << " entry: " << G4BestUnit(entry_position, "Length")
+           << " edep position: "
+           << G4BestUnit(GetEdepWeightedPosition(), "Length");
+  }
+
+  G4cout << G4endl;
 }

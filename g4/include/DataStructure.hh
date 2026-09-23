@@ -24,7 +24,14 @@ struct H11BReactionData
   G4int branch_id;    // 0: alpha0, 1: alpha1
 
   G4int reaction_channel; // 0: Resonance162, 1: Resonance675, 2: DirectDecay3Alpha, 3: GammaCapture12C
+  G4int h11b_reaction_channel; // H11BReactionChannel: canonical detailed channel
   G4int background_mode;  // 2: PhaseSpace; kept for directdecay backward compatibility
+
+  G4int alpha1_role;
+  G4int alpha2_role;
+  G4int alpha3_role;
+  G4int gamma1_role;
+  G4int gamma2_role;
 
   G4int gamma_resonance;    // 0: none, 162, 675
   G4int gamma_branch;       // 0: none, 1: 162 gamma0, 2: 162 gamma1 cascade, 3: 675 effective
@@ -125,63 +132,65 @@ struct H11BReactionData
   G4double y;
   G4double z;
 
-  G4double sigma_eval_b;
-  G4double sigma_162_model_b;
-  G4double sigma_675_model_b;
-  G4double sigma_162_total_b;
-  G4double sigma_675_total_b;
-  G4double sigma_162_used_b;
-  G4double sigma_675_used_b;
-  G4double sigma_total_used_b;
-  G4double sigma_162_sampling_b;
-  G4double sigma_675_sampling_b;
-  G4double sigma_162_directdecay_sampling_b;
-  G4double sigma_675_directdecay_sampling_b;
-  G4double sigma_background_sampling_b;
-  G4double sigma_directdecay_sampling_b;
-  G4double sigma_3alpha_sampling_total_b;
-  G4double sigma_model_sum_b;
+  G4double sigma_eval_barn;
+  G4double sigma_162_model_barn;
+  G4double sigma_675_model_barn;
+  G4double sigma_162_total_barn;
+  G4double sigma_675_total_barn;
+  G4double sigma_162_used_barn;
+  G4double sigma_675_used_barn;
+  G4double sigma_total_used_barn;
+  G4double sigma_162_sampling_barn;
+  G4double sigma_675_sampling_barn;
+  G4double sigma_162_directdecay_sampling_barn;
+  G4double sigma_675_directdecay_sampling_barn;
+  G4double sigma_background_sampling_barn;
+  G4double sigma_directdecay_sampling_barn;
+  G4double sigma_3alpha_sampling_total_barn;
+  G4double sigma_model_sum_barn;
   G4double model_scale_factor;
   G4double cross_section_bias_factor;
   G4double background_bias_factor;
   G4double direct_decay_fraction;
   G4double sequential_decay_fraction_162;
   G4double sequential_decay_fraction_675;
+  G4double configured_162_alpha0_branching_fraction;
+  G4double configured_162_alpha1_branching_fraction;
   G4double direct_decay_fraction_162;
   G4double direct_decay_fraction_675;
   G4int enable_direct_decay;
   G4double scale_factor_162;
   G4double scale_factor_675;
-  G4double sigma_background_b;
-  G4double sigma_162_directdecay_b;
-  G4double sigma_675_directdecay_b;
-  G4double sigma_directdecay_b;
-  G4double sigma_3alpha_eval_b;
-  G4double sigma_gamma_162_0_b;
-  G4double sigma_gamma_162_1_b;
-  G4double sigma_gamma_162_total_b;
-  G4double sigma_gamma_675_total_b;
-  G4double sigma_gamma_total_b;
-  G4double sigma_total_physical_all_b;
-  G4double sigma_total_sampling_all_b;
-  G4double sigma_gamma_162_0_physical_b;
-  G4double sigma_gamma_162_1_physical_b;
-  G4double sigma_gamma_675_physical_b;
-  G4double sigma_gamma_162_0_sampling_b;
-  G4double sigma_gamma_162_1_sampling_b;
-  G4double sigma_gamma_675_sampling_b;
-  G4double sigma_gamma_675_to_ground_physical_b;
-  G4double sigma_gamma_675_to_4439_physical_b;
-  G4double sigma_gamma_675_to_7654_physical_b;
-  G4double sigma_gamma_675_to_12710_physical_b;
-  G4double sigma_gamma_675_to_15110_physical_b;
-  G4double sigma_gamma_675_to_ground_sampling_b;
-  G4double sigma_gamma_675_to_4439_sampling_b;
-  G4double sigma_gamma_675_to_7654_sampling_b;
-  G4double sigma_gamma_675_to_12710_sampling_b;
-  G4double sigma_gamma_675_to_15110_sampling_b;
-  G4double sigma_gamma_sampling_total_b;
-  G4double sigma_total_all_b;
+  G4double sigma_background_barn;
+  G4double sigma_162_directdecay_barn;
+  G4double sigma_675_directdecay_barn;
+  G4double sigma_directdecay_barn;
+  G4double sigma_3alpha_eval_barn;
+  G4double sigma_gamma_162_0_barn;
+  G4double sigma_gamma_162_1_barn;
+  G4double sigma_gamma_162_total_barn;
+  G4double sigma_gamma_675_total_barn;
+  G4double sigma_gamma_total_barn;
+  G4double sigma_total_physical_all_barn;
+  G4double sigma_total_sampling_all_barn;
+  G4double sigma_gamma_162_0_physical_barn;
+  G4double sigma_gamma_162_1_physical_barn;
+  G4double sigma_gamma_675_physical_barn;
+  G4double sigma_gamma_162_0_sampling_barn;
+  G4double sigma_gamma_162_1_sampling_barn;
+  G4double sigma_gamma_675_sampling_barn;
+  G4double sigma_gamma_675_to_ground_physical_barn;
+  G4double sigma_gamma_675_to_4439_physical_barn;
+  G4double sigma_gamma_675_to_7654_physical_barn;
+  G4double sigma_gamma_675_to_12710_physical_barn;
+  G4double sigma_gamma_675_to_15110_physical_barn;
+  G4double sigma_gamma_675_to_ground_sampling_barn;
+  G4double sigma_gamma_675_to_4439_sampling_barn;
+  G4double sigma_gamma_675_to_7654_sampling_barn;
+  G4double sigma_gamma_675_to_12710_sampling_barn;
+  G4double sigma_gamma_675_to_15110_sampling_barn;
+  G4double sigma_gamma_sampling_total_barn;
+  G4double sigma_total_all_barn;
   G4double channel_probability_162;
   G4double channel_probability_675;
   G4double channel_probability_background;
@@ -205,7 +214,9 @@ struct H11BReactionData
   H11BReactionData()
       : event(0), e_alpha1(0), e_alpha2(0), e_alpha3(0), theta_lab_alpha1(0), theta_lab_alpha2(0), theta_lab_alpha3(0),
         phi_lab_alpha1(0), phi_lab_alpha2(0), phi_lab_alpha3(0), resonance_id(0), branch_id(0),
-        reaction_channel(0), background_mode(0), gamma_resonance(0), gamma_branch(0), gamma_angular_mode(0),
+        reaction_channel(0), h11b_reaction_channel(0), background_mode(0),
+        alpha1_role(0), alpha2_role(0), alpha3_role(0), gamma1_role(0), gamma2_role(0),
+        gamma_resonance(0), gamma_branch(0), gamma_angular_mode(0),
         n_prompt_gammas(0), gamma1_energy(0), gamma2_energy(0), gamma1_theta_lab(0), gamma2_theta_lab(0),
         gamma1_phi_lab(0), gamma2_phi_lab(0), gamma1_theta_cm(0), gamma2_theta_cm(0), cos_theta_gamma_cm(0),
         gamma_event_weight(1), gamma_bias_factor(1), event_sampling_weight(1), gamma_final_state_energy_MeV(0),
@@ -236,28 +247,29 @@ struct H11BReactionData
         event_weight(1), e_3alpha_cm_alpha1(0), e_3alpha_cm_alpha2(0), e_3alpha_cm_alpha3(0), ex_8Be(0),
         e_8Be(0), theta_lab_8Be(0), phi_lab_8Be(0),
 
-        x(0.), y(0.), z(0.), sigma_eval_b(0.), sigma_162_model_b(0.), sigma_675_model_b(0.),
-        sigma_162_total_b(0.), sigma_675_total_b(0.),
-        sigma_162_used_b(0.), sigma_675_used_b(0.), sigma_total_used_b(0.),
-        sigma_162_sampling_b(0.), sigma_675_sampling_b(0.), sigma_162_directdecay_sampling_b(0.),
-        sigma_675_directdecay_sampling_b(0.), sigma_background_sampling_b(0.),
-        sigma_directdecay_sampling_b(0.), sigma_3alpha_sampling_total_b(0.), sigma_model_sum_b(0.), model_scale_factor(1.),
+        x(0.), y(0.), z(0.), sigma_eval_barn(0.), sigma_162_model_barn(0.), sigma_675_model_barn(0.),
+        sigma_162_total_barn(0.), sigma_675_total_barn(0.),
+        sigma_162_used_barn(0.), sigma_675_used_barn(0.), sigma_total_used_barn(0.),
+        sigma_162_sampling_barn(0.), sigma_675_sampling_barn(0.), sigma_162_directdecay_sampling_barn(0.),
+        sigma_675_directdecay_sampling_barn(0.), sigma_background_sampling_barn(0.),
+        sigma_directdecay_sampling_barn(0.), sigma_3alpha_sampling_total_barn(0.), sigma_model_sum_barn(0.), model_scale_factor(1.),
         cross_section_bias_factor(1.), background_bias_factor(0.01), direct_decay_fraction(0.01),
         sequential_decay_fraction_162(0.99), sequential_decay_fraction_675(0.99),
+        configured_162_alpha0_branching_fraction(0.), configured_162_alpha1_branching_fraction(0.),
         direct_decay_fraction_162(0.01), direct_decay_fraction_675(0.01), enable_direct_decay(1),
-        scale_factor_162(1.), scale_factor_675(1.), sigma_background_b(0.), sigma_162_directdecay_b(0.),
-        sigma_675_directdecay_b(0.), sigma_directdecay_b(0.),
-        sigma_3alpha_eval_b(0.), sigma_gamma_162_0_b(0.),
-        sigma_gamma_162_1_b(0.), sigma_gamma_162_total_b(0.), sigma_gamma_675_total_b(0.),
-        sigma_gamma_total_b(0.), sigma_total_physical_all_b(0.), sigma_total_sampling_all_b(0.),
-        sigma_gamma_162_0_physical_b(0.), sigma_gamma_162_1_physical_b(0.), sigma_gamma_675_physical_b(0.),
-        sigma_gamma_162_0_sampling_b(0.), sigma_gamma_162_1_sampling_b(0.), sigma_gamma_675_sampling_b(0.),
-        sigma_gamma_675_to_ground_physical_b(0.), sigma_gamma_675_to_4439_physical_b(0.),
-        sigma_gamma_675_to_7654_physical_b(0.), sigma_gamma_675_to_12710_physical_b(0.),
-        sigma_gamma_675_to_15110_physical_b(0.), sigma_gamma_675_to_ground_sampling_b(0.),
-        sigma_gamma_675_to_4439_sampling_b(0.), sigma_gamma_675_to_7654_sampling_b(0.),
-        sigma_gamma_675_to_12710_sampling_b(0.), sigma_gamma_675_to_15110_sampling_b(0.),
-        sigma_gamma_sampling_total_b(0.), sigma_total_all_b(0.),
+        scale_factor_162(1.), scale_factor_675(1.), sigma_background_barn(0.), sigma_162_directdecay_barn(0.),
+        sigma_675_directdecay_barn(0.), sigma_directdecay_barn(0.),
+        sigma_3alpha_eval_barn(0.), sigma_gamma_162_0_barn(0.),
+        sigma_gamma_162_1_barn(0.), sigma_gamma_162_total_barn(0.), sigma_gamma_675_total_barn(0.),
+        sigma_gamma_total_barn(0.), sigma_total_physical_all_barn(0.), sigma_total_sampling_all_barn(0.),
+        sigma_gamma_162_0_physical_barn(0.), sigma_gamma_162_1_physical_barn(0.), sigma_gamma_675_physical_barn(0.),
+        sigma_gamma_162_0_sampling_barn(0.), sigma_gamma_162_1_sampling_barn(0.), sigma_gamma_675_sampling_barn(0.),
+        sigma_gamma_675_to_ground_physical_barn(0.), sigma_gamma_675_to_4439_physical_barn(0.),
+        sigma_gamma_675_to_7654_physical_barn(0.), sigma_gamma_675_to_12710_physical_barn(0.),
+        sigma_gamma_675_to_15110_physical_barn(0.), sigma_gamma_675_to_ground_sampling_barn(0.),
+        sigma_gamma_675_to_4439_sampling_barn(0.), sigma_gamma_675_to_7654_sampling_barn(0.),
+        sigma_gamma_675_to_12710_sampling_barn(0.), sigma_gamma_675_to_15110_sampling_barn(0.),
+        sigma_gamma_sampling_total_barn(0.), sigma_total_all_barn(0.),
         channel_probability_162(0.), channel_probability_675(0.), channel_probability_background(0.),
         channel_probability_directdecay(0.), channel_probability_directdecay_162(0.),
         channel_probability_directdecay_675(0.), channel_probability_gamma(0.), probability_gamma_162_0(0.), probability_gamma_162_1(0.),
@@ -275,17 +287,79 @@ struct H11BReactionData
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+// One outward crossing of the virtual target-surrounding scoring sphere.
+// Values are stored in analysis-friendly units and Float_t-sized precision.
+struct VirtualSphereData
+{
+  G4long event_id;
+  G4int track_id;
+  G4int parent_id;
+  G4int pdg;
+  G4int h11b_reaction_channel;
+  G4int h11b_particle_role;
+  G4int h11b_particle_source;
+  G4int generator_particle_index;
+
+  float kinetic_energy_MeV;
+  float px_MeV_c;
+  float py_MeV_c;
+  float pz_MeV_c;
+
+  float x_mm;
+  float y_mm;
+  float z_mm;
+  float theta_lab_deg;
+  float phi_lab_deg;
+  float global_time_ns;
+
+  VirtualSphereData()
+      : event_id(-1), track_id(-1), parent_id(-1), pdg(0), h11b_reaction_channel(0),
+        h11b_particle_role(0), h11b_particle_source(0), generator_particle_index(-1),
+        kinetic_energy_MeV(0.f), px_MeV_c(0.f),
+        py_MeV_c(0.f), pz_MeV_c(0.f), x_mm(0.f), y_mm(0.f), z_mm(0.f), theta_lab_deg(0.f),
+        phi_lab_deg(0.f), global_time_ns(0.f)
+  {
+  }
+
+  void Clear()
+  {
+    *this = VirtualSphereData();
+  }
+};
+
 struct EventData
 {
   G4long event_id;
 
   // Independent DSSD strip signals.  One vector element is one electronic
   // channel after all energy deposits on that strip have been accumulated.
-  std::vector<G4int> si_detector_id;
+  std::vector<G4int> si_subarray_id;
+  std::vector<G4int> si_module_id;
   std::vector<G4int> si_side;     // 0: front, 1: back
   std::vector<G4int> si_strip_id;
   std::vector<G4double> si_edep_MeV;
   std::vector<G4double> si_time_ns;
+
+  // Physical Si hits. One entry represents one Geant4 track in one
+  // physical Si detector.
+  std::vector<G4int> si_hit_detector_id;
+  std::vector<G4int> si_hit_subarray_id;
+  std::vector<G4int> si_hit_module_id;
+  std::vector<G4int> si_hit_track_id;
+  std::vector<G4int> si_hit_parent_id;
+  std::vector<G4int> si_hit_pdg;
+  std::vector<G4double> si_hit_edep_MeV;
+  std::vector<G4double> si_hit_time_ns;
+
+  // First energy-depositing pre-step position in global coordinates.
+  std::vector<G4double> si_hit_x_entry_mm;
+  std::vector<G4double> si_hit_y_entry_mm;
+  std::vector<G4double> si_hit_z_entry_mm;
+
+  // Deposited-energy-weighted mean of Geant4 step midpoints.
+  std::vector<G4double> si_hit_x_edep_mm;
+  std::vector<G4double> si_hit_y_edep_mm;
+  std::vector<G4double> si_hit_z_edep_mm;
 
   // Unsegmented gamma-detector channel signals.
   std::vector<G4int> labr3_detector_id;
@@ -305,11 +379,27 @@ struct EventData
   {
     event_id = -1;
 
-    si_detector_id.clear();
+    si_subarray_id.clear();
+    si_module_id.clear();
     si_side.clear();
     si_strip_id.clear();
     si_edep_MeV.clear();
     si_time_ns.clear();
+
+    si_hit_detector_id.clear();
+    si_hit_subarray_id.clear();
+    si_hit_module_id.clear();
+    si_hit_track_id.clear();
+    si_hit_parent_id.clear();
+    si_hit_pdg.clear();
+    si_hit_edep_MeV.clear();
+    si_hit_time_ns.clear();
+    si_hit_x_entry_mm.clear();
+    si_hit_y_entry_mm.clear();
+    si_hit_z_entry_mm.clear();
+    si_hit_x_edep_mm.clear();
+    si_hit_y_edep_mm.clear();
+    si_hit_z_edep_mm.clear();
 
     labr3_detector_id.clear();
     labr3_edep_MeV.clear();
@@ -325,7 +415,6 @@ struct EventData
 // only; they do not contain event or Monte-Carlo track truth.
 struct SiPixelMapData
 {
-  G4int detector_id;
   G4int detector_model; // 1: W1, 2: S3
   G4int subarray_id;
   G4int module_id;
@@ -339,77 +428,10 @@ struct SiPixelMapData
   G4double phi_lab_center_deg;
 
   SiPixelMapData()
-      : detector_id(-1), detector_model(0), subarray_id(-1), module_id(-1), front_strip_id(-1),
+      : detector_model(0), subarray_id(-1), module_id(-1), front_strip_id(-1),
         back_strip_id(-1), x_center_mm(0.), y_center_mm(0.), z_center_mm(0.), theta_lab_center_deg(0.),
         phi_lab_center_deg(0.)
   {
-  }
-};
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-struct TrackData
-{
-  G4long event;
-  G4int track;
-  G4double e;
-  G4double x;
-  G4double y;
-  G4double z;
-  G4double ts;
-  G4double length;
-  char volume[128];
-  char particle[128];
-
-  //
-  TrackData()
-      : event(-1), track(-1), e(0.), x(0.), y(0.), z(0.), ts(0.), length(0.)
-  {
-    std::memset(volume, '\0', sizeof(volume));
-    std::memset(particle, '\0', sizeof(particle));
-  }
-
-  //
-  void Clear()
-  {
-    *this = TrackData();
-  }
-};
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-struct StepData
-{
-  G4long event;
-  G4int track;
-  G4double de;
-  G4double pre_x;
-  G4double pre_y;
-  G4double pre_z;
-  G4double pre_total_energy;
-  G4double pre_kine_energy;
-  G4double post_x;
-  G4double post_y;
-  G4double post_z;
-  G4double post_total_energy;
-  G4double post_kine_energy;
-  G4double length;
-  char volume[128];
-  char particle[128];
-  char process[128];
-
-  //
-  StepData()
-      : event(-1), track(-1), de(0.), pre_x(0.), pre_y(0.), pre_z(0.), pre_total_energy(0.), pre_kine_energy(0.),
-        post_x(0.), post_y(0.), post_z(0.), post_total_energy(0.), post_kine_energy(0.), length(0.)
-  {
-    std::memset(volume, '\0', sizeof(volume));
-    std::memset(particle, '\0', sizeof(particle));
-    std::memset(process, '\0', sizeof(process));
-  }
-
-  //
-  void Clear()
-  {
-    *this = StepData();
   }
 };
 #endif

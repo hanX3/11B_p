@@ -12,7 +12,7 @@
 #   162SequentialDecayFraction 0.0   -> direct-decay fraction = 1.0
 #   enableDirectDecay          true  -> direct channel is active
 #
-# Read from the reaction tree ("tr"):
+# Read from the `reaction` tree:
 #   e_alpha1, e_alpha2, e_alpha3         : lab kinetic energies (MeV)
 #   e_3alpha_cm_alpha1/2/3               : energies in the 3a c.m. frame
 #   opening_angle_alpha12_cm / 13 / 23   : pairwise opening angles (Dalitz)
@@ -43,8 +43,7 @@
 # --- output: only the reaction tree is needed ---
 /output/saveReaction true
 /output/saveEvent false
-/output/saveTrack false
-/output/saveStep false
+/output/saveVirtualSphere false
 
 # --- open the cross section wide (rate only; kinematics untouched) ---
 /h11b/crossSectionBiasFactor 1000000000
@@ -54,6 +53,7 @@
 /h11b/162SequentialDecayFraction 0.0
 
 # --- isolate the 162 resonance: shut the 675 channel down ---
+/h11b/162BWScaleFactor 1.0
 /h11b/675SequentialDecayFraction 1.0
 /h11b/675ScaleFactor 0.0
 

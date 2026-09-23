@@ -102,10 +102,17 @@ std::map<G4String, G4int> LaBr3Detector::map_name_to_sectors = {{"LaBr3_NearSide
 // 1: length
 std::map<G4String, std::array<G4double, 2>> LaBr3Detector::map_labr3_par = {{"LaBr3_NearSide", {50.8, 76.2}}};
 
-// 0: x
-// 1: y
-// 2: z
-std::map<G4String, std::array<G4double, 3>> LaBr3Detector::map_placement_par = {{"LaBr3_NearSide", {225.6, 0., 158.5}}};
+// 0: transverse x position in the reference sector [mm]
+// 1: transverse y position in the reference sector [mm]
+// 2: global z position [mm]
+//
+// Keep the four-detector ring in the plane through the target centre.
+// LaBr3Array::CalculatePlacement() subsequently rotates each detector so that
+// its local +z axis points from the detector centre to the target.
+std::map<G4String, std::array<G4double, 3>>
+    LaBr3Detector::map_placement_par = {
+        {"LaBr3_NearSide", {225.6, 0., TargetZPos / mm}}
+    };
 
 // 0: diameter inner
 // 1: diameter outer

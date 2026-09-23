@@ -1,0 +1,76 @@
+# =====================================================================
+# validation_162_gamma_angular_on.mac
+#
+# Purpose: generate 162-keV GAMMA-CAPTURE events, 11B(p,gamma)12C:
+#   gamma0        : 16.11 MeV state -> g.s.        (one ~16.1 MeV gamma)
+#   gamma1 cascade: 16.11 -> 4.44(2+) -> g.s.      (~11.7 + 4.44 MeV)
+#
+# The gamma0 / cascade split follows the internal 162 gamma cross
+# sections automatically (sigma_gamma_162_0 / sigma_gamma_162_1);
+# there is no user knob for it -- which is itself something this run
+# validates.
+#
+# Read from the `reaction` tree, selecting gamma events with
+# gamma_branch > 0:
+#   gamma_branch             : 1 = gamma0, 2 = gamma1 cascade
+#   n_prompt_gammas          : 1 or 2
+#   gamma1_energy, gamma2_energy : LAB energies (MeV; Doppler-shifted)
+#   gamma_primary_energy_MeV : primary gamma energy in the emitter
+#                              rest frame (sharp line, no Doppler)
+#   cos_theta_gamma_cm       : gamma0 c.m. angle vs beam axis
+#   gamma1/2_theta_lab, _theta_cm, _phi_lab
+#   gamma_event_weight, gamma_bias_factor : weights (use if needed)
+#
+# Notes:
+#   * gammaBiasFactor is opened wide so nearly every sampled event is
+#     a gamma-capture event instead of 3-alpha. Like the cross-section
+#     bias it changes RATE only, not kinematics. The recorded
+#     gamma0:cascade ratio is unaffected (both scale together).
+#   * gamma0 W(theta) is ON here with the Craig-1956-equivalent A1/A2
+#     from run.mac. For the isotropic baseline (OFF) run, flip
+#     enable162Gamma0AngularDistribution to false and change the
+#     output file name in your batch script.
+#   * The cascade gammas are generated isotropically (current model
+#     approximation; no gamma-gamma correlation).
+# =====================================================================
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 162 keV
+
+# --- output: only the reaction tree is needed ---
+/output/saveReaction true
+/output/saveEvent false
+/output/saveVirtualSphere false
+
+# --- open the cross section wide (rate only; kinematics untouched) ---
+/h11b/crossSectionBiasFactor 1000000000
+
+# --- gamma channels: 162 ON, 675 OFF for a clean 162 sample ---
+/h11b/enable162GammaCapture true
+/h11b/enable675GammaCapture false
+
+# --- remove all competing 3-alpha channels; gamma cross sections are
+#     calculated independently of these alpha-channel scale factors ---
+/h11b/162BWScaleFactor 0.0
+/h11b/675ScaleFactor 0.0
+
+# --- pull the sampling toward the gamma channel (rate only) ---
+/h11b/gammaBiasFactor 1000000
+
+# --- gamma0 angular distribution: ON (physics values from run.mac) ---
+# For the OFF/isotropic baseline run set this to false.
+/h11b/enable162Gamma0AngularDistribution true
+/h11b/162Gamma0AngularA1 -0.17757009345794392
+/h11b/162Gamma0AngularA2 0.13084112149532712
+
+/h11b/printConfig
+/output/printConfig
+
+/run/beamOn 1000000

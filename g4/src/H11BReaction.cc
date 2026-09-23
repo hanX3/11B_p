@@ -2,6 +2,7 @@
 #include "H11BAngularDistribution.hh"
 #include "H11BConfig.hh"
 #include "H11BCrossSection.hh"
+#include "H11BTrackInformation.hh"
 
 #include "globals.hh"
 #include "G4RunManager.hh"
@@ -457,22 +458,22 @@ G4double GammaBranchPhysicalWeight(H11BGammaBranch branch, const H11BCrossSectio
 
 void FillCrossSectionDiagnostics(H11BReactionData& data, const H11BCrossSectionComponents& components)
 {
-  data.sigma_eval_b = components.sigma_eval / barn;
-  data.sigma_162_model_b = components.sigma_162_model / barn;
-  data.sigma_675_model_b = components.sigma_675_model / barn;
-  data.sigma_162_total_b = components.sigma_162_total / barn;
-  data.sigma_675_total_b = components.sigma_675_total / barn;
-  data.sigma_162_used_b = components.sigma_162 / barn;
-  data.sigma_675_used_b = components.sigma_675 / barn;
-  data.sigma_total_used_b = components.sigma_total / barn;
-  data.sigma_162_sampling_b = components.sigma_162_sampling / barn;
-  data.sigma_675_sampling_b = components.sigma_675_sampling / barn;
-  data.sigma_162_directdecay_sampling_b = components.sigma_162_directdecay_sampling / barn;
-  data.sigma_675_directdecay_sampling_b = components.sigma_675_directdecay_sampling / barn;
-  data.sigma_background_sampling_b = components.sigma_background_sampling / barn;
-  data.sigma_directdecay_sampling_b = components.sigma_directdecay_sampling / barn;
-  data.sigma_3alpha_sampling_total_b = components.sigma_3alpha_sampling_total / barn;
-  data.sigma_model_sum_b = (components.sigma_162_model + components.sigma_675_model) / barn;
+  data.sigma_eval_barn = components.sigma_eval / barn;
+  data.sigma_162_model_barn = components.sigma_162_model / barn;
+  data.sigma_675_model_barn = components.sigma_675_model / barn;
+  data.sigma_162_total_barn = components.sigma_162_total / barn;
+  data.sigma_675_total_barn = components.sigma_675_total / barn;
+  data.sigma_162_used_barn = components.sigma_162 / barn;
+  data.sigma_675_used_barn = components.sigma_675 / barn;
+  data.sigma_total_used_barn = components.sigma_total / barn;
+  data.sigma_162_sampling_barn = components.sigma_162_sampling / barn;
+  data.sigma_675_sampling_barn = components.sigma_675_sampling / barn;
+  data.sigma_162_directdecay_sampling_barn = components.sigma_162_directdecay_sampling / barn;
+  data.sigma_675_directdecay_sampling_barn = components.sigma_675_directdecay_sampling / barn;
+  data.sigma_background_sampling_barn = components.sigma_background_sampling / barn;
+  data.sigma_directdecay_sampling_barn = components.sigma_directdecay_sampling / barn;
+  data.sigma_3alpha_sampling_total_barn = components.sigma_3alpha_sampling_total / barn;
+  data.sigma_model_sum_barn = (components.sigma_162_model + components.sigma_675_model) / barn;
   data.model_scale_factor = components.scale_factor_162;
   data.cross_section_bias_factor = components.cross_section_bias_factor;
   // Fill for every event, not just gamma-capture ones: sigma_gamma_*_sampling_b
@@ -488,36 +489,36 @@ void FillCrossSectionDiagnostics(H11BReactionData& data, const H11BCrossSectionC
   data.enable_direct_decay = components.enable_direct_decay ? 1 : 0;
   data.scale_factor_162 = components.scale_factor_162;
   data.scale_factor_675 = components.scale_factor_675;
-  data.sigma_background_b = components.sigma_background / barn;
-  data.sigma_162_directdecay_b = components.sigma_162_directdecay / barn;
-  data.sigma_675_directdecay_b = components.sigma_675_directdecay / barn;
-  data.sigma_directdecay_b = components.sigma_directdecay / barn;
-  data.sigma_3alpha_eval_b = components.sigma_eval / barn;
-  data.sigma_gamma_162_0_b = components.sigma_gamma_162_0 / barn;
-  data.sigma_gamma_162_1_b = components.sigma_gamma_162_1 / barn;
-  data.sigma_gamma_162_total_b = components.sigma_gamma_162_total / barn;
-  data.sigma_gamma_675_total_b = components.sigma_gamma_675_total / barn;
-  data.sigma_gamma_total_b = components.sigma_gamma_total / barn;
-  data.sigma_total_physical_all_b = components.sigma_total_physical_all / barn;
-  data.sigma_total_sampling_all_b = components.sigma_total_sampling_all / barn;
-  data.sigma_gamma_162_0_physical_b = components.sigma_gamma_162_0_physical / barn;
-  data.sigma_gamma_162_1_physical_b = components.sigma_gamma_162_1_physical / barn;
-  data.sigma_gamma_675_physical_b = components.sigma_gamma_675_physical / barn;
-  data.sigma_gamma_162_0_sampling_b = components.sigma_gamma_162_0_sampling / barn;
-  data.sigma_gamma_162_1_sampling_b = components.sigma_gamma_162_1_sampling / barn;
-  data.sigma_gamma_675_sampling_b = components.sigma_gamma_675_sampling / barn;
-  data.sigma_gamma_675_to_ground_physical_b = components.sigma_gamma_675_to_ground_physical / barn;
-  data.sigma_gamma_675_to_4439_physical_b = components.sigma_gamma_675_to_4439_physical / barn;
-  data.sigma_gamma_675_to_7654_physical_b = components.sigma_gamma_675_to_7654_physical / barn;
-  data.sigma_gamma_675_to_12710_physical_b = components.sigma_gamma_675_to_12710_physical / barn;
-  data.sigma_gamma_675_to_15110_physical_b = components.sigma_gamma_675_to_15110_physical / barn;
-  data.sigma_gamma_675_to_ground_sampling_b = components.sigma_gamma_675_to_ground_sampling / barn;
-  data.sigma_gamma_675_to_4439_sampling_b = components.sigma_gamma_675_to_4439_sampling / barn;
-  data.sigma_gamma_675_to_7654_sampling_b = components.sigma_gamma_675_to_7654_sampling / barn;
-  data.sigma_gamma_675_to_12710_sampling_b = components.sigma_gamma_675_to_12710_sampling / barn;
-  data.sigma_gamma_675_to_15110_sampling_b = components.sigma_gamma_675_to_15110_sampling / barn;
-  data.sigma_gamma_sampling_total_b = components.sigma_gamma_sampling_total / barn;
-  data.sigma_total_all_b = components.sigma_total_all / barn;
+  data.sigma_background_barn = components.sigma_background / barn;
+  data.sigma_162_directdecay_barn = components.sigma_162_directdecay / barn;
+  data.sigma_675_directdecay_barn = components.sigma_675_directdecay / barn;
+  data.sigma_directdecay_barn = components.sigma_directdecay / barn;
+  data.sigma_3alpha_eval_barn = components.sigma_eval / barn;
+  data.sigma_gamma_162_0_barn = components.sigma_gamma_162_0 / barn;
+  data.sigma_gamma_162_1_barn = components.sigma_gamma_162_1 / barn;
+  data.sigma_gamma_162_total_barn = components.sigma_gamma_162_total / barn;
+  data.sigma_gamma_675_total_barn = components.sigma_gamma_675_total / barn;
+  data.sigma_gamma_total_barn = components.sigma_gamma_total / barn;
+  data.sigma_total_physical_all_barn = components.sigma_total_physical_all / barn;
+  data.sigma_total_sampling_all_barn = components.sigma_total_sampling_all / barn;
+  data.sigma_gamma_162_0_physical_barn = components.sigma_gamma_162_0_physical / barn;
+  data.sigma_gamma_162_1_physical_barn = components.sigma_gamma_162_1_physical / barn;
+  data.sigma_gamma_675_physical_barn = components.sigma_gamma_675_physical / barn;
+  data.sigma_gamma_162_0_sampling_barn = components.sigma_gamma_162_0_sampling / barn;
+  data.sigma_gamma_162_1_sampling_barn = components.sigma_gamma_162_1_sampling / barn;
+  data.sigma_gamma_675_sampling_barn = components.sigma_gamma_675_sampling / barn;
+  data.sigma_gamma_675_to_ground_physical_barn = components.sigma_gamma_675_to_ground_physical / barn;
+  data.sigma_gamma_675_to_4439_physical_barn = components.sigma_gamma_675_to_4439_physical / barn;
+  data.sigma_gamma_675_to_7654_physical_barn = components.sigma_gamma_675_to_7654_physical / barn;
+  data.sigma_gamma_675_to_12710_physical_barn = components.sigma_gamma_675_to_12710_physical / barn;
+  data.sigma_gamma_675_to_15110_physical_barn = components.sigma_gamma_675_to_15110_physical / barn;
+  data.sigma_gamma_675_to_ground_sampling_barn = components.sigma_gamma_675_to_ground_sampling / barn;
+  data.sigma_gamma_675_to_4439_sampling_barn = components.sigma_gamma_675_to_4439_sampling / barn;
+  data.sigma_gamma_675_to_7654_sampling_barn = components.sigma_gamma_675_to_7654_sampling / barn;
+  data.sigma_gamma_675_to_12710_sampling_barn = components.sigma_gamma_675_to_12710_sampling / barn;
+  data.sigma_gamma_675_to_15110_sampling_barn = components.sigma_gamma_675_to_15110_sampling / barn;
+  data.sigma_gamma_sampling_total_barn = components.sigma_gamma_sampling_total / barn;
+  data.sigma_total_all_barn = components.sigma_total_all / barn;
 
   if (components.sigma_total > 0.) {
     data.channel_probability_162 = components.sigma_162 / components.sigma_total;
@@ -543,6 +544,8 @@ void FillCrossSectionDiagnostics(H11BReactionData& data, const H11BCrossSectionC
 
 void FillRuntimeConfigDiagnostics(H11BReactionData& data)
 {
+  data.configured_162_alpha0_branching_fraction = H11BConfig::Get162Alpha0BranchingFraction();
+  data.configured_162_alpha1_branching_fraction = 1.0 - data.configured_162_alpha0_branching_fraction;
   data.enable_162_primary_angular_distribution = H11BConfig::GetEnable162PrimaryAngularDistribution() ? 1 : 0;
   data.a1_162_primary = H11BConfig::Get162PrimaryAngularA1();
   data.a2_162_primary = H11BConfig::Get162PrimaryAngularA2();
@@ -630,6 +633,50 @@ H11BGammaBranch Select675GammaBranch()
 {
   return Sample675GammaRelativeLine();
 }
+
+H11BReactionChannel SequentialDetailedChannel(
+    H11BReaction::ResonanceType resonance,
+    G4bool be_2plus_branch)
+{
+  if (resonance == H11BReaction::Resonance162) {
+    return be_2plus_branch
+        ? H11BReactionChannel::Seq162Be2Plus
+        : H11BReactionChannel::Seq162BeGround;
+  }
+
+  // The configured 675-keV alpha0 width is zero. Keep an impossible future
+  // ground-state selection explicitly unclassified instead of mislabeling it.
+  return be_2plus_branch
+      ? H11BReactionChannel::Seq675Be2Plus
+      : H11BReactionChannel::Unknown;
+}
+
+H11BReactionChannel DirectDetailedChannel(H11BReaction::ResonanceType resonance)
+{
+  return resonance == H11BReaction::Resonance675
+      ? H11BReactionChannel::Direct675
+      : H11BReactionChannel::Direct162;
+}
+
+H11BReactionChannel GammaDetailedChannel(H11BGammaResonance resonance)
+{
+  if (resonance == H11BGammaResonance::Resonance162)
+    return H11BReactionChannel::Gamma162;
+  if (resonance == H11BGammaResonance::Resonance675)
+    return H11BReactionChannel::Gamma675;
+  return H11BReactionChannel::Unknown;
+}
+
+void AddLabeledSecondary(G4HadFinalState& particle_change,
+                         G4DynamicParticle* particle,
+                         H11BReactionChannel channel,
+                         H11BParticleRole role,
+                         G4int generator_index)
+{
+  particle_change.AddSecondary(
+      particle,
+      H11BTrackInformation::CreatorModelTag(channel, role, generator_index));
+}
 } // namespace
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -655,6 +702,12 @@ void H11BReaction::SetCrossSectionBiasFactorCommand(G4double factor)
 void H11BReaction::Set162SequentialDecayFractionCommand(G4double fraction)
 {
   H11BCrossSection::Set162SequentialDecayFraction(fraction);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set162Alpha0BranchingFractionCommand(G4double fraction)
+{
+  H11BConfig::Set162Alpha0BranchingFraction(fraction);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -880,6 +933,36 @@ void H11BReaction::SetGammaBiasFactorCommand(G4double factor)
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::SetForcedDetailedChannelCommand(const G4String& channel)
+{
+  const H11BReactionChannel channels[] = {
+      H11BReactionChannel::Unknown,
+      H11BReactionChannel::Seq162BeGround,
+      H11BReactionChannel::Seq162Be2Plus,
+      H11BReactionChannel::Direct162,
+      H11BReactionChannel::Seq675Be2Plus,
+      H11BReactionChannel::Direct675,
+      H11BReactionChannel::Gamma162,
+      H11BReactionChannel::Gamma675};
+
+  if (channel == "off") {
+    forced_detailed_channel = H11BReactionChannel::Unknown;
+    return;
+  }
+
+  for (const auto candidate : channels) {
+    if (channel == H11BReactionChannelLabel(candidate)) {
+      forced_detailed_channel = candidate;
+      return;
+    }
+  }
+
+  G4cerr << "H11BReaction: unsupported forced detailed channel \""
+         << channel << "\"; keeping "
+         << H11BReactionChannelLabel(forced_detailed_channel) << G4endl;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void H11BReaction::PrintConfigCommand()
 {
   if (!G4Threading::IsMasterThread()) {
@@ -887,14 +970,25 @@ void H11BReaction::PrintConfigCommand()
   }
 
   G4cout << "H11B reaction configuration" << G4endl
+         << "  forcedDetailedChannel       = "
+         << H11BReactionChannelLabel(forced_detailed_channel)
+         << " (validation only)" << G4endl
          << "  crossSectionBiasFactor       = " << H11BCrossSection::GetCrossSectionBiasFactor() << G4endl
          << "  162BWScaleFactor             = " << H11BCrossSection::Get162BWScaleFactor() << G4endl
          << "  675ScaleFactor               = " << H11BCrossSection::Get675ScaleFactor() << G4endl
          << "  enableDirectDecay            = " << (H11BCrossSection::GetDirectDecayEnabled() ? "true" : "false") << G4endl
          << "  162SequentialDecayFraction   = " << H11BCrossSection::Get162SequentialDecayFraction() << G4endl
+         << "  162Alpha0BranchingFraction   = " << H11BConfig::Get162Alpha0BranchingFraction() << G4endl
+         << "  162Alpha1BranchingFraction   = " << 1.0 - H11BConfig::Get162Alpha0BranchingFraction() << G4endl
          << "  162DirectDecayFraction       = " << 1.0 - H11BCrossSection::Get162SequentialDecayFraction() << G4endl
          << "  675SequentialDecayFraction   = " << H11BCrossSection::Get675SequentialDecayFraction() << G4endl
          << "  675DirectDecayFraction       = " << 1.0 - H11BCrossSection::Get675SequentialDecayFraction() << G4endl
+         << "  675BWResonanceEnergyLab      = " << H11B675ResonanceLabEnergy / keV << " keV" << G4endl
+         << "  675BWProtonWidth             = " << H11B675ProtonWidth / keV << " keV" << G4endl
+         << "  675BWExitWidth               = " << H11B675Alpha1Width / keV << " keV" << G4endl
+         << "  675BWSpinStatFactor          = " << H11B675SpinStatFactor << G4endl
+         << "  675BWEntranceOrbitalL        = " << H11B675EntranceOrbitalL << G4endl
+         << "  675BWChannelRadius           = " << H11B675ChannelRadius / fermi << " fm" << G4endl
          << G4endl
          << "  162 primary alpha angular distribution" << G4endl
          << "    enable   = " << (H11BConfig::GetEnable162PrimaryAngularDistribution() ? "true" : "false") << G4endl
@@ -950,14 +1044,23 @@ void H11BReaction::DefineCommands()
                            "Enable direct-decay phase-space 3-alpha component");
   messenger->DeclareMethod("162SequentialDecayFraction", &H11BReaction::Set162SequentialDecayFractionCommand,
                            "Set sequential-decay fraction within the 162-keV 3-alpha resonance branch [0, 1]");
+  messenger->DeclareMethod("162Alpha0BranchingFraction", &H11BReaction::Set162Alpha0BranchingFractionCommand,
+                           "Set the 162-keV sequential alpha0 -> 8Be(g.s.) branching fraction [0, 1]");
   messenger->DeclareMethod("675SequentialDecayFraction", &H11BReaction::Set675SequentialDecayFractionCommand,
                            "Set sequential-decay fraction within the 675-keV 3-alpha resonance branch [0, 1]");
   messenger->DeclareMethod("162BWScaleFactor", &H11BReaction::Set162BWScaleFactorCommand,
                            "Scale the 162-keV BW allocation component (>= 0)");
   messenger->DeclareMethod("675ScaleFactor", &H11BReaction::Set675ScaleFactorCommand,
-                           "Scale the 675-region (Wang-2026 S-factor) component (>= 0)");
+                           "Scale the 675-keV Coulomb-suppressed BW component (>= 0)");
 
   messenger->DeclareMethod("crossSectionBiasFactor", &H11BReaction::SetCrossSectionBiasFactorCommand, "Set p + 11B cross-section sampling bias factor (>= 1)");
+  auto& forced_channel_cmd = messenger->DeclareMethod(
+      "forceDetailedChannel",
+      &H11BReaction::SetForcedDetailedChannelCommand,
+      "Validation-only forced canonical channel; off preserves physical selection");
+  forced_channel_cmd.SetCandidates(
+      "off unknown 162seq_Be_gs 162seq_Be2plus 162direct "
+      "675seq_Be2plus 675direct 162gamma 675gamma");
 
   messenger->DeclareMethod("enable675PrimaryAngularDistribution", &H11BReaction::SetEnable675PrimaryAngularDistributionCommand, "Enable 675-keV primary alpha A1/A2 angular distribution");
   messenger->DeclareMethod("675PrimaryAngularA1", &H11BReaction::Set675PrimaryAngularA1Command, "Set 675-keV primary alpha A1 coefficient");
@@ -1040,6 +1143,42 @@ G4bool H11BReaction::SelectReactionChannel(G4double kinetic_energy_lab)
   gamma_resonance = H11BGammaResonance::None;
   gamma_branch = H11BGammaBranch::None;
 
+  if (forced_detailed_channel != H11BReactionChannel::Unknown) {
+    switch (forced_detailed_channel) {
+    case H11BReactionChannel::Seq162BeGround:
+    case H11BReactionChannel::Seq162Be2Plus:
+      reaction_channel = ReactionChannel::Resonance162;
+      resonance_type = Resonance162;
+      return true;
+    case H11BReactionChannel::Direct162:
+      reaction_channel = ReactionChannel::DirectDecay3Alpha;
+      resonance_type = Resonance162;
+      return true;
+    case H11BReactionChannel::Seq675Be2Plus:
+      reaction_channel = ReactionChannel::Resonance675;
+      resonance_type = Resonance675;
+      return true;
+    case H11BReactionChannel::Direct675:
+      reaction_channel = ReactionChannel::DirectDecay3Alpha;
+      resonance_type = Resonance675;
+      return true;
+    case H11BReactionChannel::Gamma162:
+      reaction_channel = ReactionChannel::GammaCapture12C;
+      resonance_type = Resonance162;
+      gamma_resonance = H11BGammaResonance::Resonance162;
+      gamma_branch = H11BGammaBranch::Gamma162ToFirstExcitedState;
+      return true;
+    case H11BReactionChannel::Gamma675:
+      reaction_channel = ReactionChannel::GammaCapture12C;
+      resonance_type = Resonance675;
+      gamma_resonance = H11BGammaResonance::Resonance675;
+      gamma_branch = H11BGammaBranch::Gamma675To4439State;
+      return true;
+    case H11BReactionChannel::Unknown:
+      break;
+    }
+  }
+
   const G4double sampled_cross_section = G4UniformRand() * selected_components.sigma_total_sampling_all;
   if (sampled_cross_section < selected_components.sigma_3alpha_sampling_total) {
     const G4double sampled_3alpha_cross_section = G4UniformRand() * selected_components.sigma_3alpha_sampling_total;
@@ -1107,10 +1246,18 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
   G4double ex_8Be = 0.;
   G4bool is_alpha1_branch = false;
   G4bool is_alpha0_branch = false;
-  if (ChooseAlpha0Channel())
+  if (forced_detailed_channel == H11BReactionChannel::Seq162BeGround)
+    is_alpha0_branch = true;
+  else if (forced_detailed_channel == H11BReactionChannel::Seq162Be2Plus
+           || forced_detailed_channel == H11BReactionChannel::Seq675Be2Plus)
+    is_alpha1_branch = true;
+  else if (ChooseAlpha0Channel())
     is_alpha0_branch = true;
   else
     is_alpha1_branch = true;
+
+  const H11BReactionChannel detailed_channel =
+      SequentialDetailedChannel(resonance_type, is_alpha1_branch);
 
   if (is_alpha1_branch && resonance_type == Resonance675 &&
       H11BConfig::Get675AlphaDecayModel() == H11B675AlphaDecayModel::SymmetrizedCoherentL1L3) {
@@ -1326,9 +1473,12 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
 
   // Add the secondaries to the particle change stack
   // Changes being included in process
-  theParticleChange.AddSecondary(dynamic_product1);
-  theParticleChange.AddSecondary(dynamic_product2);
-  theParticleChange.AddSecondary(dynamic_product3);
+  AddLabeledSecondary(theParticleChange, dynamic_product1, detailed_channel,
+                      H11BParticleRole::FirstStepAlpha, 0);
+  AddLabeledSecondary(theParticleChange, dynamic_product2, detailed_channel,
+                      H11BParticleRole::BeDecayAlpha, 1);
+  AddLabeledSecondary(theParticleChange, dynamic_product3, detailed_channel,
+                      H11BParticleRole::BeDecayAlpha, 2);
 
   // Build the three-alpha center-of-mass frame from the final-state alpha particles.
   // This is the proper frame for the Dalitz plot.
@@ -1362,6 +1512,10 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
   reaction_data.resonance_id = resonance_type == Resonance675 ? 675 : 162;
   reaction_data.branch_id = is_alpha1_branch ? 1 : 0;
   reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
+  reaction_data.h11b_reaction_channel = static_cast<G4int>(detailed_channel);
+  reaction_data.alpha1_role = static_cast<G4int>(H11BParticleRole::FirstStepAlpha);
+  reaction_data.alpha2_role = static_cast<G4int>(H11BParticleRole::BeDecayAlpha);
+  reaction_data.alpha3_role = static_cast<G4int>(H11BParticleRole::BeDecayAlpha);
   reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
   reaction_data.e_cm_p11B = sqrt_s - m_projectile - m_target;
   reaction_data.projectile_kinetic_lab = kinetic_lab_projectile;
@@ -1556,9 +1710,28 @@ void H11BReaction::Generate675SymmetrizedCoherent3Alpha(const G4HadProjectile& p
   const auto& lv_cm_alpha2 = accepted_candidate.lv_cm_alpha[1];
   const auto& lv_cm_alpha3 = accepted_candidate.lv_cm_alpha[2];
 
-  theParticleChange.AddSecondary(new G4DynamicParticle(product1, lv_lab_alpha1));
-  theParticleChange.AddSecondary(new G4DynamicParticle(product2, lv_lab_alpha2));
-  theParticleChange.AddSecondary(new G4DynamicParticle(product3, lv_lab_alpha3));
+  const H11BReactionChannel detailed_channel =
+      H11BReactionChannel::Seq675Be2Plus;
+  // With permutation symmetrization these identify retained Monte Carlo
+  // bookkeeping slots, not experimentally unique alpha-particle identities.
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(product1, lv_lab_alpha1),
+      detailed_channel,
+      H11BParticleRole::FirstStepAlpha,
+      0);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(product2, lv_lab_alpha2),
+      detailed_channel,
+      H11BParticleRole::BeDecayAlpha,
+      1);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(product3, lv_lab_alpha3),
+      detailed_channel,
+      H11BParticleRole::BeDecayAlpha,
+      2);
 
   const G4LorentzVector lv_cm_pair23 = lv_cm_alpha2 + lv_cm_alpha3;
   const G4LorentzVector lv_lab_pair23 = lv_lab_alpha2 + lv_lab_alpha3;
@@ -1594,6 +1767,10 @@ void H11BReaction::Generate675SymmetrizedCoherent3Alpha(const G4HadProjectile& p
   reaction_data.resonance_id = 675;
   reaction_data.branch_id = 1;
   reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
+  reaction_data.h11b_reaction_channel = static_cast<G4int>(detailed_channel);
+  reaction_data.alpha1_role = static_cast<G4int>(H11BParticleRole::FirstStepAlpha);
+  reaction_data.alpha2_role = static_cast<G4int>(H11BParticleRole::BeDecayAlpha);
+  reaction_data.alpha3_role = static_cast<G4int>(H11BParticleRole::BeDecayAlpha);
   reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
   reaction_data.e_cm_p11B = sqrt_s - m_projectile - m_target;
   reaction_data.ex_max_8Be = ex_max;
@@ -1687,6 +1864,8 @@ void H11BReaction::GenerateGammaCapture(const G4HadProjectile& projectile, G4Par
   reaction_data.resonance_id = static_cast<G4int>(gamma_resonance);
   reaction_data.branch_id = -1;
   reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
+  reaction_data.h11b_reaction_channel =
+      static_cast<G4int>(GammaDetailedChannel(gamma_resonance));
   reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
   reaction_data.gamma_resonance = static_cast<G4int>(gamma_resonance);
   reaction_data.gamma_branch = static_cast<G4int>(gamma_branch);
@@ -1762,11 +1941,23 @@ void H11BReaction::Generate162Gamma0(const G4LorentzVector& initial_cm, const G4
   lv_lab_gamma.boost(initial_lab.boostVector());
   lv_lab_c12.boost(initial_lab.boostVector());
 
-  theParticleChange.AddSecondary(new G4DynamicParticle(gamma_particle, lv_lab_gamma));
-  theParticleChange.AddSecondary(new G4DynamicParticle(c12_ground, lv_lab_c12));
+  const auto detailed_channel = GammaDetailedChannel(gamma_resonance);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(gamma_particle, lv_lab_gamma),
+      detailed_channel,
+      H11BParticleRole::PrimaryGamma,
+      0);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(c12_ground, lv_lab_c12),
+      detailed_channel,
+      H11BParticleRole::Unknown,
+      -1);
 
   reaction_data.gamma_angular_mode = static_cast<G4int>(H11BConfig::Get162Gamma0AngularModeForOutput());
   reaction_data.n_prompt_gammas = 1;
+  reaction_data.gamma1_role = static_cast<G4int>(H11BParticleRole::PrimaryGamma);
   reaction_data.gamma1_energy = lv_lab_gamma.e();
   reaction_data.gamma_primary_energy_MeV = e_gamma / MeV;
   reaction_data.gamma_final_state_energy_MeV = C12LevelGround / MeV;
@@ -1807,12 +1998,30 @@ void H11BReaction::Generate162Gamma1Cascade(const G4LorentzVector& initial_cm, c
   G4LorentzVector lv_cm_gamma2 = lv_intermediate_gamma2;
   lv_cm_gamma2.boost(lv_cm_intermediate.boostVector());
 
-  theParticleChange.AddSecondary(new G4DynamicParticle(gamma_particle, lv_lab_gamma1));
-  theParticleChange.AddSecondary(new G4DynamicParticle(gamma_particle, lv_lab_gamma2));
-  theParticleChange.AddSecondary(new G4DynamicParticle(c12_ground, lv_lab_c12));
+  const auto detailed_channel = GammaDetailedChannel(gamma_resonance);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(gamma_particle, lv_lab_gamma1),
+      detailed_channel,
+      H11BParticleRole::PrimaryGamma,
+      0);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(gamma_particle, lv_lab_gamma2),
+      detailed_channel,
+      H11BParticleRole::CascadeGamma,
+      1);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(c12_ground, lv_lab_c12),
+      detailed_channel,
+      H11BParticleRole::Unknown,
+      -1);
 
   reaction_data.gamma_angular_mode = static_cast<G4int>(H11BGammaAngularMode::Isotropic);
   reaction_data.n_prompt_gammas = 2;
+  reaction_data.gamma1_role = static_cast<G4int>(H11BParticleRole::PrimaryGamma);
+  reaction_data.gamma2_role = static_cast<G4int>(H11BParticleRole::CascadeGamma);
   reaction_data.gamma1_energy = lv_lab_gamma1.e();
   reaction_data.gamma2_energy = lv_lab_gamma2.e();
   reaction_data.gamma_primary_energy_MeV = e_gamma1 / MeV;
@@ -1852,10 +2061,17 @@ void H11BReaction::Generate675GammaLine(const G4LorentzVector& initial_cm, const
   lv_lab_gamma.boost(initial_lab.boostVector());
   lv_lab_c12_final.boost(initial_lab.boostVector());
 
-  theParticleChange.AddSecondary(new G4DynamicParticle(gamma_particle, lv_lab_gamma));
+  const auto detailed_channel = GammaDetailedChannel(gamma_resonance);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(gamma_particle, lv_lab_gamma),
+      detailed_channel,
+      H11BParticleRole::PrimaryGamma,
+      0);
 
   reaction_data.gamma_angular_mode = static_cast<G4int>(H11BConfig::Get675GammaAngularModeForOutput());
   reaction_data.n_prompt_gammas = 1;
+  reaction_data.gamma1_role = static_cast<G4int>(H11BParticleRole::PrimaryGamma);
   reaction_data.gamma1_energy = lv_lab_gamma.e();
   reaction_data.gamma_primary_energy_MeV = e_gamma / MeV;
   reaction_data.gamma_final_state_energy_MeV = final_state_energy / MeV;
@@ -1886,17 +2102,33 @@ void H11BReaction::Generate675GammaLine(const G4LorentzVector& initial_cm, const
     G4LorentzVector lv_cm_gamma2 = lv_intermediate_gamma2;
     lv_cm_gamma2.boost(lv_cm_c12_final.boostVector());
 
-    theParticleChange.AddSecondary(new G4DynamicParticle(gamma_particle, lv_lab_gamma2));
-    theParticleChange.AddSecondary(new G4DynamicParticle(c12_ground, lv_lab_c12));
+    AddLabeledSecondary(
+        theParticleChange,
+        new G4DynamicParticle(gamma_particle, lv_lab_gamma2),
+        detailed_channel,
+        H11BParticleRole::CascadeGamma,
+        1);
+    AddLabeledSecondary(
+        theParticleChange,
+        new G4DynamicParticle(c12_ground, lv_lab_c12),
+        detailed_channel,
+        H11BParticleRole::Unknown,
+        -1);
 
     reaction_data.n_prompt_gammas = 2;
+    reaction_data.gamma2_role = static_cast<G4int>(H11BParticleRole::CascadeGamma);
     reaction_data.gamma2_energy = lv_lab_gamma2.e();
     reaction_data.gamma2_theta_lab = lv_lab_gamma2.theta();
     reaction_data.gamma2_phi_lab = lv_lab_gamma2.phi();
     reaction_data.gamma2_theta_cm = lv_cm_gamma2.theta();
     reaction_data.gamma_cascade_generated = 1;
   } else {
-    theParticleChange.AddSecondary(new G4DynamicParticle(c12_final, lv_lab_c12_final));
+    AddLabeledSecondary(
+        theParticleChange,
+        new G4DynamicParticle(c12_final, lv_lab_c12_final),
+        detailed_channel,
+        H11BParticleRole::Unknown,
+        -1);
     reaction_data.gamma_cascade_generated = 0;
   }
 }
@@ -1949,9 +2181,26 @@ void H11BReaction::GenerateThreeBodyPhaseSpace(const G4HadProjectile& projectile
   G4LorentzVector lv_lab_alpha3 = lv_cm_alpha3;
   lv_lab_alpha3.boost(lv_lab_total.boostVector());
 
-  theParticleChange.AddSecondary(new G4DynamicParticle(product1, lv_lab_alpha1));
-  theParticleChange.AddSecondary(new G4DynamicParticle(product2, lv_lab_alpha2));
-  theParticleChange.AddSecondary(new G4DynamicParticle(product3, lv_lab_alpha3));
+  const H11BReactionChannel detailed_channel =
+      DirectDetailedChannel(resonance_type);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(product1, lv_lab_alpha1),
+      detailed_channel,
+      H11BParticleRole::DirectDecayAlpha,
+      0);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(product2, lv_lab_alpha2),
+      detailed_channel,
+      H11BParticleRole::DirectDecayAlpha,
+      1);
+  AddLabeledSecondary(
+      theParticleChange,
+      new G4DynamicParticle(product3, lv_lab_alpha3),
+      detailed_channel,
+      H11BParticleRole::DirectDecayAlpha,
+      2);
 
   G4LorentzVector lv_lab_3alpha = lv_lab_alpha1 + lv_lab_alpha2 + lv_lab_alpha3;
   const G4ThreeVector beta_3alpha = lv_lab_3alpha.boostVector();
@@ -1978,6 +2227,10 @@ void H11BReaction::GenerateThreeBodyPhaseSpace(const G4HadProjectile& projectile
   reaction_data.resonance_id = resonance_type == Resonance675 ? 675 : 162;
   reaction_data.branch_id = -1;
   reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
+  reaction_data.h11b_reaction_channel = static_cast<G4int>(detailed_channel);
+  reaction_data.alpha1_role = static_cast<G4int>(H11BParticleRole::DirectDecayAlpha);
+  reaction_data.alpha2_role = static_cast<G4int>(H11BParticleRole::DirectDecayAlpha);
+  reaction_data.alpha3_role = static_cast<G4int>(H11BParticleRole::DirectDecayAlpha);
   reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
   reaction_data.e_cm_p11B = sqrt_s - m_projectile - m_target;
   reaction_data.ex_max_8Be = ex_max;
@@ -2210,9 +2463,9 @@ G4double H11BReaction::WeightAlpha8BeFirstBreakup(G4double e_alpha8Be, G4double 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 G4bool H11BReaction::ChooseAlpha0Channel() const
 {
-  // The relative alpha0/alpha1 yield is taken directly from the partial widths
-  // of the selected resonance. alpha0 means 8Be ground state; alpha1 means
-  // 8Be(2+) excited state.
+  // alpha0 means 8Be ground state; alpha1 means 8Be(2+) excited state. The
+  // 162-keV ratio is runtime-configurable; the 675-keV ratio remains derived
+  // from its fixed partial widths.
   G4double probability_alpha0 = GetAlpha0BranchingRatio();
   G4double rand = G4UniformRand();
 
@@ -2223,18 +2476,15 @@ G4bool H11BReaction::ChooseAlpha0Channel() const
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 G4double H11BReaction::GetAlpha0BranchingRatio() const
 {
-  G4double alpha0_width = H11B162Alpha0Width / keV;
-  G4double alpha1_width = H11B162Alpha1Width / keV;
-
-  if (resonance_type == Resonance675) {
-    alpha0_width = H11B675Alpha0Width / keV;
-    alpha1_width = H11B675Alpha1Width / keV;
+  if (resonance_type == Resonance162) {
+    return H11BConfig::Get162Alpha0BranchingFraction();
   }
 
-  G4double total_alpha_width = alpha0_width + alpha1_width;
-  if (total_alpha_width <= 0.) return 0.;
+  const G4double alpha0_width = H11B675Alpha0Width / keV;
+  const G4double alpha1_width = H11B675Alpha1Width / keV;
+  const G4double total_alpha_width = alpha0_width + alpha1_width;
 
-  return alpha0_width / total_alpha_width;
+  return total_alpha_width > 0.0 ? alpha0_width / total_alpha_width : 0.0;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

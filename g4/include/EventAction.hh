@@ -20,8 +20,10 @@ public:
 private:
   G4int hc_id_si_front;
   G4int hc_id_si_back;
+  G4int hc_id_si_deposit;
   G4int hc_id_hpge;
   G4int hc_id_labr3;
+  G4int hc_id_virtual_sphere;
 
   EventData event_data;
   RootIO* root_io;

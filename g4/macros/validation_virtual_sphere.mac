@@ -1,0 +1,48 @@
+# Validate the target-centred virtual-sphere crossing output.
+# Geometry commands must precede /run/initialize.
+
+/virtualSphere/enabled true
+/virtualSphere/radius 25 mm
+/virtualSphere/thickness 1 um
+/virtualSphere/saveElectrons false
+/virtualSphere/saveOpticalPhotons false
+/virtualSphere/minKineticEnergy 0 keV
+
+/target/thickness 0.12 um
+/target/backing false
+
+/run/initialize
+
+/output/saveReaction true
+/output/saveVirtualSphere true
+/output/saveEvent false
+
+/gun/particle proton
+/gun/energy 675 keV
+
+/h11b/crossSectionBiasFactor 1000000000
+/h11b/enableDirectDecay false
+/h11b/675SequentialDecayFraction 1.0
+/h11b/675ScaleFactor 1.0
+
+# Reproducible strict sequential 675-keV final-state model.
+/h11b/675AlphaDecayModel symmetrizedCoherentL1L3
+/h11b/675StrictL1Fraction 0.76
+/h11b/675StrictL13Phase 4.209734155810323
+/h11b/675StrictCoherentL13 true
+/h11b/675StrictPermutationSymmetrized true
+/h11b/675Strict8BeLambdaEnergyKeV 3037.0
+/h11b/675Strict8BeReducedWidthSquaredKeV 1075.0
+/h11b/675StrictWeightMaxSafetyFactor 3.0
+/h11b/675StrictWeightMaxScanCandidates 2000
+/h11b/675StrictMaxSamplingAttempts 10000
+
+/h11b/162BWScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+/virtualSphere/printConfig
+/output/printConfig
+/h11b/printConfig
+
+/run/beamOn 100000

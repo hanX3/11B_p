@@ -8,118 +8,179 @@
 
 class G4GenericMessenger;
 
-// Centralized, runtime-configurable geometry / strip-segmentation parameters
-// for the Si (DSSD-style) array.  Exposed under /si/ so that sensitivity scans
-// can be run without recompiling.
+// Runtime configuration for the silicon array.
 //
-// ---- "Connected drum" baseline (all-commercial W1/S3 parts) ----
-//   * Si_Drum        (ring_id 1): 12 W1-type DSSDs (50x50 mm, 16x16 strips)
-//     forming a regular dodecagonal prism around the target.  The inscribed
-//     radius is DERIVED from the module count so the faces always close:
-//         r_drum = 25 mm / tan(pi / n_modules)   (n=12 -> 93.30 mm)
-//     Polar coverage theta ~ 75-105 deg.
-//   * Si_ForwardCap  (ring_id 4) / Si_BackwardCap (ring_id 5): 12 W1 each,
-//     hinged on the drum end edges and folded inward by capFoldAngle.
-//     Square plates folded inward would physically intersect, so each cap is
-//     built as two fish-scale sub-rings of 6: even module ids hinge on the
-//     drum edge, odd module ids hinge capStagger further out in radius and
-//     are rotated half a face period, covering the V-gaps of the inner
-//     sub-ring.  Fold 45 deg -> theta ~ 44-75 (forward) / 105-136 (backward).
-//   * Si_Forward/BackwardAnnular (ring_id 3/2): S3-type annular DSSDs
-//     (active r = 11-35 mm, 24 rings x 32 sectors) at +/-36 mm,
-//     theta ~ 17-44 / 136-163, sealing the ends.
+// Default geometry in this version:
+//   * 12 W1 DSSDs form the equatorial drum.
+//   * Twelve wedge DSSSDs form a forward CAKE-like lampshade.
+//   * Twelve mirrored wedge DSSSDs form a backward lampshade.
+//   * One S3 is placed behind the central aperture of each lampshade.
 //
-// IMPORTANT timing note: strip counts are consumed inside SiSD::ProcessHits.
-// A single sensitive silicon solid produces two independent strip-hit
-// collections, one for each DSSD face, so strip counts take effect immediately
-// and do NOT require a geometry rebuild.  All
-// module counts, fold angle, stagger, annular distances and enable flags DO
-// affect the built geometry; set them before /run/initialize, or set them and
-// issue /run/reinitializeGeometry.
+// The lampshade plane is defined directly by its centre distance and centre
+// polar angle.  Its long local axis is tangent to a sphere centred on the
+// target, producing a visibly inclined lampshade rather than a nearly flat
+// annulus.
 class SiArrayConfig
 {
 public:
   SiArrayConfig();
   ~SiArrayConfig();
 
-  // ---- Strip counts (consumed at hit time, no rebuild needed) ----
-  // W1 modules (drum + caps): "z" = polar-direction strips (local y),
-  // "phi" = azimuthal-direction strips (local x).  16x16 for a real W1.
+  // ---- W1 drum readout ----
   static G4int GetBarrelStripsZ();
   static G4int GetBarrelStripsPhi();
-  static G4int GetAnnularRings();     // radial rings on the S3 annulars (24)
-  static G4int GetAnnularSectors();   // angular sectors on the S3 annulars (32)
 
-  // ---- Geometry-affecting parameters (consumed at build time) ----
+  // ---- S3 readout ----
+  static G4int GetAnnularRings();
+  static G4int GetAnnularSectors();
+
+  // ---- Lampshade wedge-DSSD readout ----
+  static G4int GetLampshadeRings();
+  static G4int GetLampshadeSectors();
+
+  // ---- S3 geometry ----
   static G4bool GetEnableForwardAnnular();
-  static G4double GetForwardDistance();   // |z - target| of forward annular
-  static G4double GetBackwardDistance();  // |z - target| of backward annular
+  static G4bool GetEnableBackwardAnnular();
+  static G4double GetForwardDistance();
+  static G4double GetBackwardDistance();
 
-  static G4int GetDrumModules();          // W1 faces of the dodecagonal drum
-  static G4double GetDrumInscribedRadius(); // DERIVED: 25mm / tan(pi/n)
-  static G4double GetCapFoldAngle();      // inward fold of the cap plates
-  static G4double GetCapStagger();        // radial offset of the outer fish-scale sub-ring
+  // ---- W1 drum geometry ----
+  static G4int GetDrumModules();
+  static G4double GetDrumInscribedRadius();
   static G4bool GetEnableDrum();
+
+  // ---- CAKE-like lampshade geometry ----
   static G4bool GetEnableForwardCap();
   static G4bool GetEnableBackwardCap();
+  static G4int GetLampshadeModules();
+  static G4double GetLampshadeCenterDistance();
+  static G4double GetLampshadeCenterAngle();
+  static G4double GetLampshadeLength();
+  static G4double GetLampshadeModuleSpan();
+  static G4double GetLampshadeThickness();
+
+  // Derived narrow-edge and wide-edge geometry. Distances are positive axial
+  // distances from the target centre for one end; the backward end is mirrored.
+  static G4double GetLampshadeInnerRadius();
+  static G4double GetLampshadeInnerDistance();
+  static G4double GetLampshadeOuterRadius();
+  static G4double GetLampshadeOuterDistance();
+  static G4double GetLampshadeInnerAngle();
+  static G4double GetLampshadeOuterAngle();
+  static G4double GetLampshadeInnerHalfWidth();
+  static G4double GetLampshadeOuterHalfWidth();
+
+  // Historical aliases retained to avoid breaking older source code/macros.
+  static G4double GetLampshadeHoleApothem();
+  static G4double GetCapFoldAngle();
+  static G4double GetCapClearance();
+  static G4double GetCapStagger();
 
   static void SetBarrelStripsZ(G4int n);
   static void SetBarrelStripsPhi(G4int n);
   static void SetAnnularRings(G4int n);
   static void SetAnnularSectors(G4int n);
+  static void SetLampshadeRings(G4int n);
+  static void SetLampshadeSectors(G4int n);
+
   static void SetEnableForwardAnnular(G4bool enabled);
+  static void SetEnableBackwardAnnular(G4bool enabled);
   static void SetForwardDistance(G4double d);
   static void SetBackwardDistance(G4double d);
+
   static void SetDrumModules(G4int n);
-  static void SetCapFoldAngle(G4double angle);
-  static void SetCapStagger(G4double d);
   static void SetEnableDrum(G4bool enabled);
+
   static void SetEnableForwardCap(G4bool enabled);
   static void SetEnableBackwardCap(G4bool enabled);
+  static void SetLampshadeModules(G4int n);
+  static void SetLampshadeCenterDistance(G4double d);
+  static void SetLampshadeCenterAngle(G4double angle);
+  static void SetLampshadeLength(G4double d);
+  static void SetLampshadeModuleSpan(G4double angle);
+  static void SetLampshadeThickness(G4double d);
 
-  // ---- Forward-alpha commissioning beam (detector test, default OFF) ----
-  // When enabled, PrimaryGeneratorAction replaces the proton beam with alpha
-  // particles fired downstream of the target/backing into a forward cone.
-  // Detector-response test fixture only; does NOT touch the 11B reaction.
+  // Obsolete geometry setters retained for macro compatibility.
+  static void SetLampshadeHoleApothem(G4double d);
+  static void SetLampshadeInnerDistance(G4double d);
+  static void SetLampshadeOuterAngle(G4double angle);
+  static void SetCapFoldAngle(G4double angle);
+  static void SetCapClearance(G4double d);
+  static void SetCapStagger(G4double d);
+
+  // ---- Detector-test primary modes (default OFF) ----
   static G4bool GetForwardAlphaTestBeam();
   static G4double GetForwardAlphaTestBeamEnergy();
   static void SetForwardAlphaTestBeam(G4bool enabled);
   static void SetForwardAlphaTestBeamEnergy(G4double energy);
 
-  // ---- Independent DSSD strip ids from a local hit position ----
-  // W1 front face: local-x / azimuthal coordinate, 0..barrelStripsPhi-1.
-  static G4int BarrelPhiStripId(G4double local_x, G4double half_x);
-  // W1 back face: local-y / polar coordinate, 0..barrelStripsZ-1.
-  static G4int BarrelZStripId(G4double local_y, G4double half_y);
-  // S3 front face: angular-sector coordinate, 0..annularSectors-1.
-  static G4int AnnularSectorStripId(G4double local_x, G4double local_y);
-  // S3 back face: radial-ring coordinate, 0..annularRings-1.
-  static G4int AnnularRingStripId(G4double local_x, G4double local_y, G4double r_inner, G4double r_outer);
+  static G4bool GetFixedAlphaTestBeam();
+  static G4double GetFixedAlphaTestBeamEnergy();
+  static G4double GetFixedAlphaTestBeamTheta();
+  static G4double GetFixedAlphaTestBeamPhi();
+  static void SetFixedAlphaTestBeam(G4bool enabled);
+  static void SetFixedAlphaTestBeamEnergy(G4double energy);
+  static void SetFixedAlphaTestBeamTheta(G4double theta);
+  static void SetFixedAlphaTestBeamPhi(G4double phi);
 
-  // Electronic channels per DSSD module.  These are sums of the two faces,
-  // not virtual-pixel products.
+  // ---- Strip IDs from local hit coordinates ----
+  static G4int BarrelPhiStripId(G4double local_x, G4double half_x);
+  static G4int BarrelZStripId(G4double local_y, G4double half_y);
+  static G4int AnnularSectorStripId(G4double local_x, G4double local_y);
+  static G4int AnnularRingStripId(G4double local_x,
+                                 G4double local_y,
+                                 G4double r_inner,
+                                 G4double r_outer);
+  static G4double LampshadeHalfWidthAtY(G4double local_y,
+                                       G4double half_length,
+                                       G4double inner_half_width,
+                                       G4double outer_half_width);
+  static G4int LampshadeSectorStripId(G4double local_x,
+                                     G4double local_y,
+                                     G4double half_length,
+                                     G4double inner_half_width,
+                                     G4double outer_half_width);
+  static G4int LampshadeRingStripId(G4double local_y, G4double half_length);
+
   static G4int BarrelReadoutChannelCount();
   static G4int AnnularReadoutChannelCount();
+  static G4int LampshadeReadoutChannelCount();
 
-  // One-shot startup self-test of the copy_no encoding round-trip.
   static void SelfTestCopyNoEncoding();
 
-  // Non-static command wrappers bound to the /si/ messenger.
+  // Messenger wrappers.
   void SetBarrelStripsZCmd(G4int n);
   void SetBarrelStripsPhiCmd(G4int n);
   void SetAnnularRingsCmd(G4int n);
   void SetAnnularSectorsCmd(G4int n);
+  void SetLampshadeRingsCmd(G4int n);
+  void SetLampshadeSectorsCmd(G4int n);
   void SetEnableForwardAnnularCmd(G4bool enabled);
+  void SetEnableBackwardAnnularCmd(G4bool enabled);
   void SetForwardDistanceCmd(G4double d);
   void SetBackwardDistanceCmd(G4double d);
   void SetDrumModulesCmd(G4int n);
-  void SetCapFoldAngleCmd(G4double angle);
-  void SetCapStaggerCmd(G4double d);
   void SetEnableDrumCmd(G4bool enabled);
   void SetEnableForwardCapCmd(G4bool enabled);
   void SetEnableBackwardCapCmd(G4bool enabled);
+  void SetLampshadeModulesCmd(G4int n);
+  void SetLampshadeCenterDistanceCmd(G4double d);
+  void SetLampshadeCenterAngleCmd(G4double angle);
+  void SetLampshadeLengthCmd(G4double d);
+  void SetLampshadeModuleSpanCmd(G4double angle);
+  void SetLampshadeThicknessCmd(G4double d);
+  void SetLampshadeHoleApothemCmd(G4double d);
+  void SetLampshadeInnerDistanceCmd(G4double d);
+  void SetLampshadeOuterAngleCmd(G4double angle);
+  void SetCapFoldAngleCmd(G4double angle);
+  void SetCapClearanceCmd(G4double d);
+  void SetCapStaggerCmd(G4double d);
   void SetForwardAlphaTestBeamCmd(G4bool enabled);
   void SetForwardAlphaTestBeamEnergyCmd(G4double energy);
+  void SetFixedAlphaTestBeamCmd(G4bool enabled);
+  void SetFixedAlphaTestBeamEnergyCmd(G4double energy);
+  void SetFixedAlphaTestBeamThetaCmd(G4double theta);
+  void SetFixedAlphaTestBeamPhiCmd(G4double phi);
   void PrintConfigCommand();
 
 private:

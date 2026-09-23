@@ -8,6 +8,7 @@
 
 #include "DataStructure.hh"
 #include "H11BCrossSection.hh"
+#include "H11BParticleLabel.hh"
 #include "RootIO.hh"
 #include "Constants.hh"
 
@@ -42,6 +43,7 @@ public:
   void ReactionKinematic(const G4HadProjectile& projectile, G4ParticleDefinition* target, G4ParticleDefinition* product1, G4ParticleDefinition* product2, G4ParticleDefinition* product3);
   void SetCrossSectionBiasFactorCommand(G4double factor);
   void Set162SequentialDecayFractionCommand(G4double fraction);
+  void Set162Alpha0BranchingFractionCommand(G4double fraction);
   void Set675SequentialDecayFractionCommand(G4double fraction);
   void SetDirectDecayEnabledCommand(G4bool enabled);
   void Set162BWScaleFactorCommand(G4double factor);
@@ -79,6 +81,7 @@ public:
   void Set162GammaCaptureEnabledCommand(G4bool enabled);
   void Set675GammaCaptureEnabledCommand(G4bool enabled);
   void SetGammaBiasFactorCommand(G4double factor);
+  void SetForcedDetailedChannelCommand(const G4String& channel);
   void PrintConfigCommand();
 
 private:
@@ -87,6 +90,7 @@ private:
   ReactionChannel reaction_channel = ReactionChannel::Resonance162;
   H11BGammaResonance gamma_resonance = H11BGammaResonance::None;
   H11BGammaBranch gamma_branch = H11BGammaBranch::None;
+  H11BReactionChannel forced_detailed_channel = H11BReactionChannel::Unknown;
   H11BCrossSectionComponents selected_components;
   std::unique_ptr<G4GenericMessenger> messenger;
 

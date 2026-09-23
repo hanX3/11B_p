@@ -1,35 +1,39 @@
 #include "TrackingAction.hh"
 
-#include "RootIO.hh"
-#include "OutputConfig.hh"
+#include "H11BTrackInformation.hh"
 
-#include "G4RunManager.hh"
-#include "G4PhysicalConstants.hh"
 #include "G4Track.hh"
-#include "G4Positron.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-TrackingAction::TrackingAction(RootIO* rio)
-    : G4UserTrackingAction(), root_io(rio) {}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void TrackingAction::PreUserTrackingAction(const G4Track*) {}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void TrackingAction::PostUserTrackingAction(const G4Track* track)
+void TrackingAction::PreUserTrackingAction(const G4Track* track)
 {
-  if (!OutputConfig::GetSaveTrack()) return;
+  if (!track || track->GetUserInformation()) return;
 
-  track_data.event = G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID();
-  track_data.track = track->GetTrackID();
-  track_data.e = track->GetKineticEnergy();
-  track_data.x = track->GetPosition().x();
-  track_data.y = track->GetPosition().y();
-  track_data.z = track->GetPosition().z();
-  track_data.ts = track->GetGlobalTime();
-  track_data.length = track->GetTrackLength();
-  strcpy(track_data.volume, track->GetVolume()->GetName());
-  strcpy(track_data.particle, track->GetDefinition()->GetParticleName());
+  H11BReactionChannel channel = H11BReactionChannel::Unknown;
+  H11BParticleRole role = H11BParticleRole::Unknown;
+  G4int generator_index = -1;
 
-  root_io->FillTrackTree(track_data);
+  if (H11BTrackInformation::DecodeCreatorModelTag(
+          track->GetCreatorModelID(), channel, role, generator_index)) {
+    track->SetUserInformation(new H11BTrackInformation(
+        channel,
+        role,
+        H11BParticleSource::H11BReactionProduct,
+        generator_index));
+    return;
+  }
+
+  const H11BParticleSource source = track->GetParentID() == 0
+      ? H11BParticleSource::BeamParticle
+      : H11BParticleSource::TransportSecondary;
+  track->SetUserInformation(new H11BTrackInformation(
+      H11BReactionChannel::Unknown,
+      H11BParticleRole::Unknown,
+      source,
+      -1));
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void TrackingAction::PostUserTrackingAction(const G4Track*)
+{
 }

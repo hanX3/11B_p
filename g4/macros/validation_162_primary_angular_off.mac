@@ -30,17 +30,21 @@
 
 /output/saveReaction true
 /output/saveEvent false
-/output/saveTrack false
-/output/saveStep false
+/output/saveVirtualSphere false
 
 /h11b/crossSectionBiasFactor 1000000000
 /h11b/enableDirectDecay false
 /h11b/162SequentialDecayFraction 1.0
 
+# Isolate the 162-keV resonance and freeze its evaluated alpha0 fraction.
+/h11b/162BWScaleFactor 1.0
+/h11b/675ScaleFactor 0.0
+/h11b/162Alpha0BranchingFraction 0.0494296578
+
 /h11b/enable162GammaCapture false
 /h11b/enable675GammaCapture false
 
-# --- enable the primary angular distribution, branch-resolved ---
+# --- disable the primary angular distribution, branch-resolved ---
 /h11b/enable162PrimaryAngularDistribution false
 /h11b/162PrimaryAlpha0AngularA1 0.0
 /h11b/162PrimaryAlpha0AngularA2 0.6

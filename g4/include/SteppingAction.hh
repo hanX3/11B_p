@@ -1,27 +1,21 @@
 #ifndef SteppingAction_H
 #define SteppingAction_H 1
 
-#include "DataStructure.hh"
-
 #include "G4UserSteppingAction.hh"
-#include "globals.hh"
 
-class G4LogicalVolume;
-
-class RootIO;
+class G4Step;
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+// Reserved project hook for future per-step logic.
+// The proton step limit in the target is implemented by G4UserLimits and
+// ProtonStepLimiterPhysics; it does not depend on this user action.
 class SteppingAction : public G4UserSteppingAction
 {
 public:
-  explicit SteppingAction(RootIO* root_io);
-  virtual ~SteppingAction();
+  SteppingAction() = default;
+  ~SteppingAction() override = default;
 
-  virtual void UserSteppingAction(const G4Step*);
-
-private:
-  RootIO* root_io;
-  StepData step_data;
+  void UserSteppingAction(const G4Step*) override;
 };
 
 #endif

@@ -9,6 +9,7 @@
 #include <utility>
 
 namespace {
+G4double g_162_alpha0_branching_fraction = H11BDefault162Alpha0BranchingFraction;
 G4bool g_enable_162_primary_angular_distribution = H11BDefaultEnable162PrimaryAngularDistribution;
 G4double g_162_primary_a1 = H11BDefault162PrimaryAngularA1;
 G4double g_162_primary_a2 = H11BDefault162PrimaryAngularA2;
@@ -184,6 +185,22 @@ void Validate675Alpha1SecondaryAngularDistribution()
 } // namespace
 
 namespace H11BConfig {
+void Set162Alpha0BranchingFraction(G4double value)
+{
+  if (!std::isfinite(value) || value < 0.0 || value > 1.0) {
+    G4cerr << "Invalid /h11b/162Alpha0BranchingFraction " << value
+           << ". Use a finite value in [0, 1]." << G4endl;
+    return;
+  }
+
+  g_162_alpha0_branching_fraction = value;
+}
+
+G4double Get162Alpha0BranchingFraction()
+{
+  return g_162_alpha0_branching_fraction;
+}
+
 G4bool GetEnable162PrimaryAngularDistribution()
 {
   return g_enable_162_primary_angular_distribution;

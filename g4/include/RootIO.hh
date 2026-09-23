@@ -5,14 +5,10 @@
 #include "DataStructure.hh"
 #include <globals.hh>
 
-#include <fstream>
-#include <map>
-
+#include "Rtypes.h"
 #include "TFile.h"
 #include "TTree.h"
-#include "Rtypes.h"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 class RootIO
 {
 public:
@@ -21,61 +17,47 @@ public:
 
   void SetRandomSeed(ULong64_t seed);
 
-  // reaction
-public:
-  void OpenReactionFile();
-  void CloseReactionFile();
+  // Unified physics/detector output file:
+  //   si_pixel_map -> reaction -> virtual_sphere -> event
+  void OpenDataFile();
+  void CloseDataFile();
   void FillReactionTree(H11BReactionData& data);
-
-  // event
-public:
-  void OpenEventFile();
-  void CloseEventFile();
+  void FillVirtualSphereTree(VirtualSphereData& data);
   void FillEventTree(EventData& data);
 
-  // track
-public:
-  void OpenTrackFile();
-  void CloseTrackFile();
-  void FillTrackTree(TrackData& data);
 
-  // step
-public:
-  void OpenStepFile();
-  void CloseStepFile();
-  void FillStepTree(StepData& data);
-
-  // reaction
 private:
-  H11BReactionData reaction_data;
+  void CreateSiPixelMapTree();
+  void CreateReactionTree();
+  void CreateVirtualSphereTree();
+  void CreateEventTree();
+
+private:
   ULong64_t random_seed = 0;
-  TFile* reaction_file = nullptr;
-  TTree* run_info_tree = nullptr;
-  TTree* reaction_tree = nullptr;
+  G4int output_schema_version = 8;
+  G4double configured_162_alpha0_branching_fraction = H11BDefault162Alpha0BranchingFraction;
+  G4double configured_162_alpha1_branching_fraction = 1.0 - H11BDefault162Alpha0BranchingFraction;
+  G4int virtual_sphere_enabled = 0;
+  G4double virtual_sphere_radius_mm = 0.;
+  G4double virtual_sphere_thickness_um = 0.;
+  G4int virtual_sphere_save_electrons = 0;
+  G4int virtual_sphere_save_optical_photons = 0;
+  G4double virtual_sphere_min_kinetic_energy_keV = 0.;
 
-  // event
-private:
-  EventData event_data;
-  TFile* event_file = nullptr;
-  TTree* event_tree = nullptr;
+  TFile* data_file = nullptr;
   TTree* si_pixel_map_tree = nullptr;
+  TTree* reaction_tree = nullptr;
+  TTree* virtual_sphere_tree = nullptr;
+  TTree* event_tree = nullptr;
+  TTree* run_info_tree = nullptr;
+
   SiPixelMapData si_pixel_map_data;
+  H11BReactionData reaction_data;
+  VirtualSphereData virtual_sphere_data;
+  EventData event_data;
 
-  // track
-private:
-  TrackData track_data;
-  TFile* track_file = nullptr;
-  TTree* track_tree = nullptr;
-
-  // step
-private:
-  StepData step_data;
-  TFile* step_file = nullptr;
-  TTree* step_tree = nullptr;
 
   char file_name[1024];
 };
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 #endif

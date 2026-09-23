@@ -1,26 +1,21 @@
 #ifndef TrackingAction_H
 #define TrackingAction_H 1
 
-#include "Constants.hh"
-#include "DataStructure.hh"
 #include "G4UserTrackingAction.hh"
-#include "globals.hh"
 
-class RootIO;
+class G4Track;
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+// Converts secondary-specific H11B creator tags into owned per-track metadata.
+// No track ROOT output is produced by this class.
 class TrackingAction : public G4UserTrackingAction
 {
 public:
-  explicit TrackingAction(RootIO* root_io);
-  ~TrackingAction(){};
+  TrackingAction() = default;
+  ~TrackingAction() override = default;
 
-  void PreUserTrackingAction(const G4Track*);
-  void PostUserTrackingAction(const G4Track*);
-
-private:
-  RootIO* root_io;
-  TrackData track_data;
+  void PreUserTrackingAction(const G4Track*) override;
+  void PostUserTrackingAction(const G4Track*) override;
 };
 
 #endif

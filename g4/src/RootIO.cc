@@ -1,16 +1,18 @@
 #include "RootIO.hh"
+
+#include "H11BConfig.hh"
+#include "OutputConfig.hh"
 #include "OutputPath.hh"
 #include "SiArray.hh"
+#include "VirtualSphereConfig.hh"
 
-#include <iostream>
-#include <stdio.h>
-#include <time.h>
-#include <fstream>
-#include <sstream>
-#include <cstddef>
-#include "G4UnitsTable.hh"
-#include "G4ThreeVector.hh"
 #include "G4Threading.hh"
+#include "G4SystemOfUnits.hh"
+#include "G4ios.hh"
+
+#include <cstddef>
+#include <cstdio>
+#include <ctime>
 
 namespace {
 void FillThreadedFileTag(char* file_name, std::size_t file_name_size)
@@ -19,71 +21,135 @@ void FillThreadedFileTag(char* file_name, std::size_t file_name_size)
   struct tm tt;
   localtime_r(&t, &tt);
 
-  const G4int thread_id = G4Threading::G4GetThreadId();
-  if (thread_id >= 0) {
-    snprintf(file_name, file_name_size, "%d%02d%02d_%02dh%02dm%02ds_t%d", tt.tm_year + 1900, tt.tm_mon + 1, tt.tm_mday, tt.tm_hour, tt.tm_min, tt.tm_sec, thread_id);
-  } else {
-    snprintf(file_name, file_name_size, "%d%02d%02d_%02dh%02dm%02ds_master", tt.tm_year + 1900, tt.tm_mon + 1, tt.tm_mday, tt.tm_hour, tt.tm_min, tt.tm_sec);
-  }
+  // Worker IDs are non-negative.  In sequential mode Geant4 returns a
+  // negative sentinel, which is mapped to t0 because no master output file is
+  // created.  The resulting name is always <timestamp>_t<thread>.root.
+  const G4int geant4_thread_id = G4Threading::G4GetThreadId();
+  const G4int output_thread_id = geant4_thread_id >= 0 ? geant4_thread_id : 0;
+  snprintf(file_name, file_name_size, "%d%02d%02d_%02dh%02dm%02ds_t%d", tt.tm_year + 1900,
+           tt.tm_mon + 1, tt.tm_mday, tt.tm_hour, tt.tm_min, tt.tm_sec, output_thread_id);
 }
 } // namespace
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 RootIO::RootIO()
 {
   reaction_data.Clear();
+  virtual_sphere_data.Clear();
   event_data.Clear();
-  track_data.Clear();
-  step_data.Clear();
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 RootIO::~RootIO()
 {
-  if (reaction_file) {
-    delete reaction_file;
-    reaction_file = nullptr;
-  }
-  if (event_file) {
-    delete event_file;
-    event_file = nullptr;
-  }
-  if (track_file) {
-    delete track_file;
-    track_file = nullptr;
-  }
-  if (step_file) {
-    delete step_file;
-    step_file = nullptr;
+  if (data_file) {
+    delete data_file;
+    data_file = nullptr;
   }
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::SetRandomSeed(ULong64_t seed)
 {
   random_seed = seed;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::OpenReactionFile()
+void RootIO::OpenDataFile()
 {
+  if (data_file) {
+    delete data_file;
+    data_file = nullptr;
+  }
+  si_pixel_map_tree = nullptr;
+  reaction_tree = nullptr;
+  virtual_sphere_tree = nullptr;
+  event_tree = nullptr;
+  run_info_tree = nullptr;
+
   FillThreadedFileTag(file_name, sizeof(file_name));
-  G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
+  const auto output_path = HBOutputPath::MakeOutputFilePath(file_name);
 
-  const auto output_path = HBOutputPath::MakeOutputFilePath("reaction", file_name);
-
-  reaction_file = new TFile(output_path.string().c_str(), "RECREATE");
-  if (!reaction_file) {
-    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
+  data_file = new TFile(output_path.string().c_str(), "RECREATE");
+  if (!data_file || data_file->IsZombie()) {
+    G4cout << "RootIO: failed to create " << output_path.string() << G4endl;
+    delete data_file;
+    data_file = nullptr;
     return;
   }
-  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
+
+  // Create trees in the requested conceptual order. The close routine writes
+  // them in the same order: si_pixel_map, reaction, virtual_sphere, event.
+  CreateSiPixelMapTree();
+  if (OutputConfig::GetSaveReaction()) CreateReactionTree();
+  if (OutputConfig::GetSaveVirtualSphere() && VirtualSphereConfig::GetEnabled()) CreateVirtualSphereTree();
+  if (OutputConfig::GetSaveEvent()) CreateEventTree();
+
+  virtual_sphere_enabled = VirtualSphereConfig::GetEnabled() ? 1 : 0;
+  configured_162_alpha0_branching_fraction = H11BConfig::Get162Alpha0BranchingFraction();
+  configured_162_alpha1_branching_fraction = 1.0 - configured_162_alpha0_branching_fraction;
+  virtual_sphere_radius_mm = VirtualSphereConfig::GetRadius() / mm;
+  virtual_sphere_thickness_um = VirtualSphereConfig::GetThickness() / um;
+  virtual_sphere_save_electrons = VirtualSphereConfig::GetSaveElectrons() ? 1 : 0;
+  virtual_sphere_save_optical_photons = VirtualSphereConfig::GetSaveOpticalPhotons() ? 1 : 0;
+  virtual_sphere_min_kinetic_energy_keV = VirtualSphereConfig::GetMinKineticEnergy() / keV;
 
   run_info_tree = new TTree("RunInfo", "run information");
   run_info_tree->Branch("random_seed", &random_seed, "random_seed/l");
-  run_info_tree->Fill();
+  run_info_tree->Branch("output_schema_version", &output_schema_version, "output_schema_version/I");
+  run_info_tree->Branch("configured_162_alpha0_branching_fraction",
+                        &configured_162_alpha0_branching_fraction,
+                        "configured_162_alpha0_branching_fraction/D");
+  run_info_tree->Branch("configured_162_alpha1_branching_fraction",
+                        &configured_162_alpha1_branching_fraction,
+                        "configured_162_alpha1_branching_fraction/D");
+  run_info_tree->Branch("virtual_sphere_enabled", &virtual_sphere_enabled, "virtual_sphere_enabled/I");
+  run_info_tree->Branch("virtual_sphere_radius_mm", &virtual_sphere_radius_mm, "virtual_sphere_radius_mm/D");
+  run_info_tree->Branch("virtual_sphere_thickness_um", &virtual_sphere_thickness_um,
+                        "virtual_sphere_thickness_um/D");
+  run_info_tree->Branch("virtual_sphere_save_electrons", &virtual_sphere_save_electrons,
+                        "virtual_sphere_save_electrons/I");
+  run_info_tree->Branch("virtual_sphere_save_optical_photons", &virtual_sphere_save_optical_photons,
+                        "virtual_sphere_save_optical_photons/I");
+  run_info_tree->Branch("virtual_sphere_min_kinetic_energy_keV", &virtual_sphere_min_kinetic_energy_keV,
+                        "virtual_sphere_min_kinetic_energy_keV/D");
+  if (G4Threading::G4GetThreadId() <= 0) run_info_tree->Fill();
 
-  reaction_tree = new TTree("tr", "reaction simulation data");
+  G4cout << "RootIO: opened unified output " << output_path.string() << G4endl;
+}
+
+void RootIO::CreateSiPixelMapTree()
+{
+  if (!data_file) return;
+  data_file->cd();
+
+  si_pixel_map_tree = new TTree("si_pixel_map", "DSSD ideal-pixel centre geometry");
+  si_pixel_map_tree->Branch("detector_model", &si_pixel_map_data.detector_model, "detector_model/I");
+  si_pixel_map_tree->Branch("subarray_id", &si_pixel_map_data.subarray_id, "subarray_id/I");
+  si_pixel_map_tree->Branch("module_id", &si_pixel_map_data.module_id, "module_id/I");
+  si_pixel_map_tree->Branch("front_strip_id", &si_pixel_map_data.front_strip_id, "front_strip_id/I");
+  si_pixel_map_tree->Branch("back_strip_id", &si_pixel_map_data.back_strip_id, "back_strip_id/I");
+  si_pixel_map_tree->Branch("x_center_mm", &si_pixel_map_data.x_center_mm, "x_center_mm/D");
+  si_pixel_map_tree->Branch("y_center_mm", &si_pixel_map_data.y_center_mm, "y_center_mm/D");
+  si_pixel_map_tree->Branch("z_center_mm", &si_pixel_map_data.z_center_mm, "z_center_mm/D");
+  si_pixel_map_tree->Branch("theta_lab_center_deg", &si_pixel_map_data.theta_lab_center_deg,
+                            "theta_lab_center_deg/D");
+  si_pixel_map_tree->Branch("phi_lab_center_deg", &si_pixel_map_data.phi_lab_center_deg,
+                            "phi_lab_center_deg/D");
+
+  // In a multi-thread run every worker has the same static map. Fill it only
+  // in worker 0 (or the serial thread -1) so hadd does not duplicate entries.
+  const G4int thread_id = G4Threading::G4GetThreadId();
+  if (thread_id <= 0) {
+    const auto pixel_map = SiArray::BuildPixelMap();
+    for (const auto& entry : pixel_map) {
+      si_pixel_map_data = entry;
+      si_pixel_map_tree->Fill();
+    }
+  }
+}
+
+void RootIO::CreateReactionTree()
+{
+  if (!data_file) return;
+  data_file->cd();
+  reaction_tree = new TTree("reaction", "reaction simulation data");
   reaction_tree->Branch("event", &reaction_data.event, "event/L");
   reaction_tree->Branch("e_alpha1", &reaction_data.e_alpha1, "e_alpha1/D");
   reaction_tree->Branch("e_alpha2", &reaction_data.e_alpha2, "e_alpha2/D");
@@ -97,6 +163,13 @@ void RootIO::OpenReactionFile()
   reaction_tree->Branch("resonance_id", &reaction_data.resonance_id, "resonance_id/I");
   reaction_tree->Branch("branch_id", &reaction_data.branch_id, "branch_id/I");
   reaction_tree->Branch("reaction_channel", &reaction_data.reaction_channel, "reaction_channel/I");
+  reaction_tree->Branch("h11b_reaction_channel", &reaction_data.h11b_reaction_channel,
+                        "h11b_reaction_channel/I");
+  reaction_tree->Branch("alpha1_role", &reaction_data.alpha1_role, "alpha1_role/I");
+  reaction_tree->Branch("alpha2_role", &reaction_data.alpha2_role, "alpha2_role/I");
+  reaction_tree->Branch("alpha3_role", &reaction_data.alpha3_role, "alpha3_role/I");
+  reaction_tree->Branch("gamma1_role", &reaction_data.gamma1_role, "gamma1_role/I");
+  reaction_tree->Branch("gamma2_role", &reaction_data.gamma2_role, "gamma2_role/I");
   reaction_tree->Branch("background_mode", &reaction_data.background_mode, "background_mode/I");
   reaction_tree->Branch("gamma_resonance", &reaction_data.gamma_resonance, "gamma_resonance/I");
   reaction_tree->Branch("gamma_branch", &reaction_data.gamma_branch, "gamma_branch/I");
@@ -186,63 +259,69 @@ void RootIO::OpenReactionFile()
   reaction_tree->Branch("x", &reaction_data.x, "x/D");
   reaction_tree->Branch("y", &reaction_data.y, "y/D");
   reaction_tree->Branch("z", &reaction_data.z, "z/D");
-  reaction_tree->Branch("sigma_eval_b", &reaction_data.sigma_eval_b, "sigma_eval_b/D");
-  reaction_tree->Branch("sigma_162_model_b", &reaction_data.sigma_162_model_b, "sigma_162_model_b/D");
-  reaction_tree->Branch("sigma_675_model_b", &reaction_data.sigma_675_model_b, "sigma_675_model_b/D");
-  reaction_tree->Branch("sigma_162_total_b", &reaction_data.sigma_162_total_b, "sigma_162_total_b/D");
-  reaction_tree->Branch("sigma_675_total_b", &reaction_data.sigma_675_total_b, "sigma_675_total_b/D");
-  reaction_tree->Branch("sigma_162_used_b", &reaction_data.sigma_162_used_b, "sigma_162_used_b/D");
-  reaction_tree->Branch("sigma_675_used_b", &reaction_data.sigma_675_used_b, "sigma_675_used_b/D");
-  reaction_tree->Branch("sigma_total_used_b", &reaction_data.sigma_total_used_b, "sigma_total_used_b/D");
-  reaction_tree->Branch("sigma_162_sampling_b", &reaction_data.sigma_162_sampling_b, "sigma_162_sampling_b/D");
-  reaction_tree->Branch("sigma_675_sampling_b", &reaction_data.sigma_675_sampling_b, "sigma_675_sampling_b/D");
-  reaction_tree->Branch("sigma_162_directdecay_sampling_b", &reaction_data.sigma_162_directdecay_sampling_b, "sigma_162_directdecay_sampling_b/D");
-  reaction_tree->Branch("sigma_675_directdecay_sampling_b", &reaction_data.sigma_675_directdecay_sampling_b, "sigma_675_directdecay_sampling_b/D");
-  reaction_tree->Branch("sigma_background_sampling_b", &reaction_data.sigma_background_sampling_b, "sigma_background_sampling_b/D");
-  reaction_tree->Branch("sigma_directdecay_sampling_b", &reaction_data.sigma_directdecay_sampling_b, "sigma_directdecay_sampling_b/D");
-  reaction_tree->Branch("sigma_3alpha_sampling_total_b", &reaction_data.sigma_3alpha_sampling_total_b, "sigma_3alpha_sampling_total_b/D");
-  reaction_tree->Branch("sigma_model_sum_b", &reaction_data.sigma_model_sum_b, "sigma_model_sum_b/D");
+  reaction_tree->Branch("sigma_eval_barn", &reaction_data.sigma_eval_barn, "sigma_eval_barn/D");
+  reaction_tree->Branch("sigma_162_model_barn", &reaction_data.sigma_162_model_barn, "sigma_162_model_barn/D");
+  reaction_tree->Branch("sigma_675_model_barn", &reaction_data.sigma_675_model_barn, "sigma_675_model_barn/D");
+  reaction_tree->Branch("sigma_162_total_barn", &reaction_data.sigma_162_total_barn, "sigma_162_total_barn/D");
+  reaction_tree->Branch("sigma_675_total_barn", &reaction_data.sigma_675_total_barn, "sigma_675_total_barn/D");
+  reaction_tree->Branch("sigma_162_used_barn", &reaction_data.sigma_162_used_barn, "sigma_162_used_barn/D");
+  reaction_tree->Branch("sigma_675_used_barn", &reaction_data.sigma_675_used_barn, "sigma_675_used_barn/D");
+  reaction_tree->Branch("sigma_total_used_barn", &reaction_data.sigma_total_used_barn, "sigma_total_used_barn/D");
+  reaction_tree->Branch("sigma_162_sampling_barn", &reaction_data.sigma_162_sampling_barn, "sigma_162_sampling_barn/D");
+  reaction_tree->Branch("sigma_675_sampling_barn", &reaction_data.sigma_675_sampling_barn, "sigma_675_sampling_barn/D");
+  reaction_tree->Branch("sigma_162_directdecay_sampling_barn", &reaction_data.sigma_162_directdecay_sampling_barn, "sigma_162_directdecay_sampling_barn/D");
+  reaction_tree->Branch("sigma_675_directdecay_sampling_barn", &reaction_data.sigma_675_directdecay_sampling_barn, "sigma_675_directdecay_sampling_barn/D");
+  reaction_tree->Branch("sigma_background_sampling_barn", &reaction_data.sigma_background_sampling_barn, "sigma_background_sampling_barn/D");
+  reaction_tree->Branch("sigma_directdecay_sampling_barn", &reaction_data.sigma_directdecay_sampling_barn, "sigma_directdecay_sampling_barn/D");
+  reaction_tree->Branch("sigma_3alpha_sampling_total_barn", &reaction_data.sigma_3alpha_sampling_total_barn, "sigma_3alpha_sampling_total_barn/D");
+  reaction_tree->Branch("sigma_model_sum_barn", &reaction_data.sigma_model_sum_barn, "sigma_model_sum_barn/D");
   reaction_tree->Branch("model_scale_factor", &reaction_data.model_scale_factor, "model_scale_factor/D");
   reaction_tree->Branch("cross_section_bias_factor", &reaction_data.cross_section_bias_factor, "cross_section_bias_factor/D");
   reaction_tree->Branch("background_bias_factor", &reaction_data.background_bias_factor, "background_bias_factor/D");
   reaction_tree->Branch("direct_decay_fraction", &reaction_data.direct_decay_fraction, "direct_decay_fraction/D");
   reaction_tree->Branch("sequential_decay_fraction_162", &reaction_data.sequential_decay_fraction_162, "sequential_decay_fraction_162/D");
   reaction_tree->Branch("sequential_decay_fraction_675", &reaction_data.sequential_decay_fraction_675, "sequential_decay_fraction_675/D");
+  reaction_tree->Branch("configured_162_alpha0_branching_fraction",
+                        &reaction_data.configured_162_alpha0_branching_fraction,
+                        "configured_162_alpha0_branching_fraction/D");
+  reaction_tree->Branch("configured_162_alpha1_branching_fraction",
+                        &reaction_data.configured_162_alpha1_branching_fraction,
+                        "configured_162_alpha1_branching_fraction/D");
   reaction_tree->Branch("direct_decay_fraction_162", &reaction_data.direct_decay_fraction_162, "direct_decay_fraction_162/D");
   reaction_tree->Branch("direct_decay_fraction_675", &reaction_data.direct_decay_fraction_675, "direct_decay_fraction_675/D");
   reaction_tree->Branch("enable_direct_decay", &reaction_data.enable_direct_decay, "enable_direct_decay/I");
   reaction_tree->Branch("scale_factor_162", &reaction_data.scale_factor_162, "scale_factor_162/D");
   reaction_tree->Branch("scale_factor_675", &reaction_data.scale_factor_675, "scale_factor_675/D");
-  reaction_tree->Branch("sigma_background_b", &reaction_data.sigma_background_b, "sigma_background_b/D");
-  reaction_tree->Branch("sigma_162_directdecay_b", &reaction_data.sigma_162_directdecay_b, "sigma_162_directdecay_b/D");
-  reaction_tree->Branch("sigma_675_directdecay_b", &reaction_data.sigma_675_directdecay_b, "sigma_675_directdecay_b/D");
-  reaction_tree->Branch("sigma_directdecay_b", &reaction_data.sigma_directdecay_b, "sigma_directdecay_b/D");
-  reaction_tree->Branch("sigma_3alpha_eval_b", &reaction_data.sigma_3alpha_eval_b, "sigma_3alpha_eval_b/D");
-  reaction_tree->Branch("sigma_gamma_162_0_b", &reaction_data.sigma_gamma_162_0_b, "sigma_gamma_162_0_b/D");
-  reaction_tree->Branch("sigma_gamma_162_1_b", &reaction_data.sigma_gamma_162_1_b, "sigma_gamma_162_1_b/D");
-  reaction_tree->Branch("sigma_gamma_162_total_b", &reaction_data.sigma_gamma_162_total_b, "sigma_gamma_162_total_b/D");
-  reaction_tree->Branch("sigma_gamma_675_total_b", &reaction_data.sigma_gamma_675_total_b, "sigma_gamma_675_total_b/D");
-  reaction_tree->Branch("sigma_gamma_total_b", &reaction_data.sigma_gamma_total_b, "sigma_gamma_total_b/D");
-  reaction_tree->Branch("sigma_total_physical_all_b", &reaction_data.sigma_total_physical_all_b, "sigma_total_physical_all_b/D");
-  reaction_tree->Branch("sigma_total_sampling_all_b", &reaction_data.sigma_total_sampling_all_b, "sigma_total_sampling_all_b/D");
-  reaction_tree->Branch("sigma_gamma_162_0_physical_b", &reaction_data.sigma_gamma_162_0_physical_b, "sigma_gamma_162_0_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_162_1_physical_b", &reaction_data.sigma_gamma_162_1_physical_b, "sigma_gamma_162_1_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_675_physical_b", &reaction_data.sigma_gamma_675_physical_b, "sigma_gamma_675_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_162_0_sampling_b", &reaction_data.sigma_gamma_162_0_sampling_b, "sigma_gamma_162_0_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_162_1_sampling_b", &reaction_data.sigma_gamma_162_1_sampling_b, "sigma_gamma_162_1_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_675_sampling_b", &reaction_data.sigma_gamma_675_sampling_b, "sigma_gamma_675_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_ground_physical_b", &reaction_data.sigma_gamma_675_to_ground_physical_b, "sigma_gamma_675_to_ground_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_4439_physical_b", &reaction_data.sigma_gamma_675_to_4439_physical_b, "sigma_gamma_675_to_4439_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_7654_physical_b", &reaction_data.sigma_gamma_675_to_7654_physical_b, "sigma_gamma_675_to_7654_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_12710_physical_b", &reaction_data.sigma_gamma_675_to_12710_physical_b, "sigma_gamma_675_to_12710_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_15110_physical_b", &reaction_data.sigma_gamma_675_to_15110_physical_b, "sigma_gamma_675_to_15110_physical_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_ground_sampling_b", &reaction_data.sigma_gamma_675_to_ground_sampling_b, "sigma_gamma_675_to_ground_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_4439_sampling_b", &reaction_data.sigma_gamma_675_to_4439_sampling_b, "sigma_gamma_675_to_4439_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_7654_sampling_b", &reaction_data.sigma_gamma_675_to_7654_sampling_b, "sigma_gamma_675_to_7654_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_12710_sampling_b", &reaction_data.sigma_gamma_675_to_12710_sampling_b, "sigma_gamma_675_to_12710_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_675_to_15110_sampling_b", &reaction_data.sigma_gamma_675_to_15110_sampling_b, "sigma_gamma_675_to_15110_sampling_b/D");
-  reaction_tree->Branch("sigma_gamma_sampling_total_b", &reaction_data.sigma_gamma_sampling_total_b, "sigma_gamma_sampling_total_b/D");
-  reaction_tree->Branch("sigma_total_all_b", &reaction_data.sigma_total_all_b, "sigma_total_all_b/D");
+  reaction_tree->Branch("sigma_background_barn", &reaction_data.sigma_background_barn, "sigma_background_barn/D");
+  reaction_tree->Branch("sigma_162_directdecay_barn", &reaction_data.sigma_162_directdecay_barn, "sigma_162_directdecay_barn/D");
+  reaction_tree->Branch("sigma_675_directdecay_barn", &reaction_data.sigma_675_directdecay_barn, "sigma_675_directdecay_barn/D");
+  reaction_tree->Branch("sigma_directdecay_barn", &reaction_data.sigma_directdecay_barn, "sigma_directdecay_barn/D");
+  reaction_tree->Branch("sigma_3alpha_eval_barn", &reaction_data.sigma_3alpha_eval_barn, "sigma_3alpha_eval_barn/D");
+  reaction_tree->Branch("sigma_gamma_162_0_barn", &reaction_data.sigma_gamma_162_0_barn, "sigma_gamma_162_0_barn/D");
+  reaction_tree->Branch("sigma_gamma_162_1_barn", &reaction_data.sigma_gamma_162_1_barn, "sigma_gamma_162_1_barn/D");
+  reaction_tree->Branch("sigma_gamma_162_total_barn", &reaction_data.sigma_gamma_162_total_barn, "sigma_gamma_162_total_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_total_barn", &reaction_data.sigma_gamma_675_total_barn, "sigma_gamma_675_total_barn/D");
+  reaction_tree->Branch("sigma_gamma_total_barn", &reaction_data.sigma_gamma_total_barn, "sigma_gamma_total_barn/D");
+  reaction_tree->Branch("sigma_total_physical_all_barn", &reaction_data.sigma_total_physical_all_barn, "sigma_total_physical_all_barn/D");
+  reaction_tree->Branch("sigma_total_sampling_all_barn", &reaction_data.sigma_total_sampling_all_barn, "sigma_total_sampling_all_barn/D");
+  reaction_tree->Branch("sigma_gamma_162_0_physical_barn", &reaction_data.sigma_gamma_162_0_physical_barn, "sigma_gamma_162_0_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_162_1_physical_barn", &reaction_data.sigma_gamma_162_1_physical_barn, "sigma_gamma_162_1_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_physical_barn", &reaction_data.sigma_gamma_675_physical_barn, "sigma_gamma_675_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_162_0_sampling_barn", &reaction_data.sigma_gamma_162_0_sampling_barn, "sigma_gamma_162_0_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_162_1_sampling_barn", &reaction_data.sigma_gamma_162_1_sampling_barn, "sigma_gamma_162_1_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_sampling_barn", &reaction_data.sigma_gamma_675_sampling_barn, "sigma_gamma_675_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_ground_physical_barn", &reaction_data.sigma_gamma_675_to_ground_physical_barn, "sigma_gamma_675_to_ground_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_4439_physical_barn", &reaction_data.sigma_gamma_675_to_4439_physical_barn, "sigma_gamma_675_to_4439_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_7654_physical_barn", &reaction_data.sigma_gamma_675_to_7654_physical_barn, "sigma_gamma_675_to_7654_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_12710_physical_barn", &reaction_data.sigma_gamma_675_to_12710_physical_barn, "sigma_gamma_675_to_12710_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_15110_physical_barn", &reaction_data.sigma_gamma_675_to_15110_physical_barn, "sigma_gamma_675_to_15110_physical_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_ground_sampling_barn", &reaction_data.sigma_gamma_675_to_ground_sampling_barn, "sigma_gamma_675_to_ground_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_4439_sampling_barn", &reaction_data.sigma_gamma_675_to_4439_sampling_barn, "sigma_gamma_675_to_4439_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_7654_sampling_barn", &reaction_data.sigma_gamma_675_to_7654_sampling_barn, "sigma_gamma_675_to_7654_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_12710_sampling_barn", &reaction_data.sigma_gamma_675_to_12710_sampling_barn, "sigma_gamma_675_to_12710_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_675_to_15110_sampling_barn", &reaction_data.sigma_gamma_675_to_15110_sampling_barn, "sigma_gamma_675_to_15110_sampling_barn/D");
+  reaction_tree->Branch("sigma_gamma_sampling_total_barn", &reaction_data.sigma_gamma_sampling_total_barn, "sigma_gamma_sampling_total_barn/D");
+  reaction_tree->Branch("sigma_total_all_barn", &reaction_data.sigma_total_all_barn, "sigma_total_all_barn/D");
   reaction_tree->Branch("channel_probability_162", &reaction_data.channel_probability_162, "channel_probability_162/D");
   reaction_tree->Branch("channel_probability_675", &reaction_data.channel_probability_675, "channel_probability_675/D");
   reaction_tree->Branch("channel_probability_background", &reaction_data.channel_probability_background, "channel_probability_background/D");
@@ -259,58 +338,70 @@ void RootIO::OpenReactionFile()
   reaction_tree->Branch("probability_gamma_675_to_12710", &reaction_data.probability_gamma_675_to_12710, "probability_gamma_675_to_12710/D");
   reaction_tree->Branch("probability_gamma_675_to_15110", &reaction_data.probability_gamma_675_to_15110, "probability_gamma_675_to_15110/D");
   reaction_tree->Branch("reaction", reaction_data.reaction, "reaction/C");
-
-  if (!reaction_tree) {
-    G4cout << "\n can't create tree" << G4endl;
-    return;
-  }
-  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::FillReactionTree(H11BReactionData& data)
+void RootIO::CreateVirtualSphereTree()
 {
-  if (!reaction_tree) return;
+  if (!data_file) return;
+  data_file->cd();
 
-  reaction_data = data;
-  reaction_tree->Fill();
+  virtual_sphere_tree = new TTree("virtual_sphere", "first outward crossing of the virtual sphere");
+  virtual_sphere_tree->Branch("event_id", &virtual_sphere_data.event_id, "event_id/L");
+  virtual_sphere_tree->Branch("track_id", &virtual_sphere_data.track_id, "track_id/I");
+  virtual_sphere_tree->Branch("parent_id", &virtual_sphere_data.parent_id, "parent_id/I");
+  virtual_sphere_tree->Branch("pdg", &virtual_sphere_data.pdg, "pdg/I");
+  virtual_sphere_tree->Branch("h11b_reaction_channel", &virtual_sphere_data.h11b_reaction_channel,
+                              "h11b_reaction_channel/I");
+  virtual_sphere_tree->Branch("h11b_particle_role", &virtual_sphere_data.h11b_particle_role,
+                              "h11b_particle_role/I");
+  virtual_sphere_tree->Branch("h11b_particle_source", &virtual_sphere_data.h11b_particle_source,
+                              "h11b_particle_source/I");
+  virtual_sphere_tree->Branch("generator_particle_index", &virtual_sphere_data.generator_particle_index,
+                              "generator_particle_index/I");
+  virtual_sphere_tree->Branch("kinetic_energy_MeV", &virtual_sphere_data.kinetic_energy_MeV,
+                              "kinetic_energy_MeV/F");
+  virtual_sphere_tree->Branch("px_MeV_c", &virtual_sphere_data.px_MeV_c, "px_MeV_c/F");
+  virtual_sphere_tree->Branch("py_MeV_c", &virtual_sphere_data.py_MeV_c, "py_MeV_c/F");
+  virtual_sphere_tree->Branch("pz_MeV_c", &virtual_sphere_data.pz_MeV_c, "pz_MeV_c/F");
+  virtual_sphere_tree->Branch("x_mm", &virtual_sphere_data.x_mm, "x_mm/F");
+  virtual_sphere_tree->Branch("y_mm", &virtual_sphere_data.y_mm, "y_mm/F");
+  virtual_sphere_tree->Branch("z_mm", &virtual_sphere_data.z_mm, "z_mm/F");
+  virtual_sphere_tree->Branch("theta_lab_deg", &virtual_sphere_data.theta_lab_deg, "theta_lab_deg/F");
+  virtual_sphere_tree->Branch("phi_lab_deg", &virtual_sphere_data.phi_lab_deg, "phi_lab_deg/F");
+  virtual_sphere_tree->Branch("global_time_ns", &virtual_sphere_data.global_time_ns, "global_time_ns/F");
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::CloseReactionFile()
+void RootIO::CreateEventTree()
 {
-  if (!reaction_file) return;
-
-  reaction_file->cd();
-  if (run_info_tree) run_info_tree->Write();
-  if (reaction_tree) reaction_tree->Write();
-  reaction_file->Close();
-  G4cout << "\n----> reaction tree is saved.\n\n";
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::OpenEventFile()
-{
-  FillThreadedFileTag(file_name, sizeof(file_name));
-  G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
-
-  const auto output_path = HBOutputPath::MakeOutputFilePath("event", file_name);
-
-  event_file = new TFile(output_path.string().c_str(), "RECREATE");
-  if (!event_file) {
-    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
-    return;
-  }
-  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
+  if (!data_file) return;
+  data_file->cd();
 
   event_tree = new TTree("event", "one entry per Geant4 event");
   event_tree->Branch("event_id", &event_data.event_id, "event_id/L");
 
-  event_tree->Branch("si_detector_id", &event_data.si_detector_id);
+  event_tree->Branch("si_subarray_id", &event_data.si_subarray_id);
+  event_tree->Branch("si_module_id", &event_data.si_module_id);
   event_tree->Branch("si_side", &event_data.si_side);
   event_tree->Branch("si_strip_id", &event_data.si_strip_id);
   event_tree->Branch("si_edep_MeV", &event_data.si_edep_MeV);
   event_tree->Branch("si_time_ns", &event_data.si_time_ns);
+
+  event_tree->Branch("si_hit_detector_id", &event_data.si_hit_detector_id);
+  event_tree->Branch("si_hit_subarray_id", &event_data.si_hit_subarray_id);
+  event_tree->Branch("si_hit_module_id", &event_data.si_hit_module_id);
+  event_tree->Branch("si_hit_track_id", &event_data.si_hit_track_id);
+  event_tree->Branch("si_hit_parent_id", &event_data.si_hit_parent_id);
+  event_tree->Branch("si_hit_pdg", &event_data.si_hit_pdg);
+  event_tree->Branch("si_hit_edep_MeV", &event_data.si_hit_edep_MeV);
+  event_tree->Branch("si_hit_time_ns", &event_data.si_hit_time_ns);
+
+  event_tree->Branch("si_hit_x_entry_mm", &event_data.si_hit_x_entry_mm);
+  event_tree->Branch("si_hit_y_entry_mm", &event_data.si_hit_y_entry_mm);
+  event_tree->Branch("si_hit_z_entry_mm", &event_data.si_hit_z_entry_mm);
+
+  event_tree->Branch("si_hit_x_edep_mm", &event_data.si_hit_x_edep_mm);
+  event_tree->Branch("si_hit_y_edep_mm", &event_data.si_hit_y_edep_mm);
+  event_tree->Branch("si_hit_z_edep_mm", &event_data.si_hit_z_edep_mm);
 
   event_tree->Branch("labr3_detector_id", &event_data.labr3_detector_id);
   event_tree->Branch("labr3_edep_MeV", &event_data.labr3_edep_MeV);
@@ -319,172 +410,48 @@ void RootIO::OpenEventFile()
   event_tree->Branch("hpge_detector_id", &event_data.hpge_detector_id);
   event_tree->Branch("hpge_edep_MeV", &event_data.hpge_edep_MeV);
   event_tree->Branch("hpge_time_ns", &event_data.hpge_time_ns);
-
-  if (!event_tree) {
-    G4cout << "\n can't create event tree" << G4endl;
-    return;
-  }
-
-  // Static geometry lookup used after front/back strip pairing.  Angles are
-  // calculated from the nominal target centre (0,0,TargetZPos); the saved xyz
-  // coordinates allow Python to recompute them for an event-specific vertex.
-  si_pixel_map_tree = new TTree("si_pixel_map", "DSSD ideal-pixel centre geometry");
-  si_pixel_map_tree->Branch("detector_id", &si_pixel_map_data.detector_id, "detector_id/I");
-  si_pixel_map_tree->Branch("detector_model", &si_pixel_map_data.detector_model, "detector_model/I");
-  si_pixel_map_tree->Branch("subarray_id", &si_pixel_map_data.subarray_id, "subarray_id/I");
-  si_pixel_map_tree->Branch("module_id", &si_pixel_map_data.module_id, "module_id/I");
-  si_pixel_map_tree->Branch("front_strip_id", &si_pixel_map_data.front_strip_id, "front_strip_id/I");
-  si_pixel_map_tree->Branch("back_strip_id", &si_pixel_map_data.back_strip_id, "back_strip_id/I");
-  si_pixel_map_tree->Branch("x_center_mm", &si_pixel_map_data.x_center_mm, "x_center_mm/D");
-  si_pixel_map_tree->Branch("y_center_mm", &si_pixel_map_data.y_center_mm, "y_center_mm/D");
-  si_pixel_map_tree->Branch("z_center_mm", &si_pixel_map_data.z_center_mm, "z_center_mm/D");
-  si_pixel_map_tree->Branch("theta_lab_center_deg", &si_pixel_map_data.theta_lab_center_deg,
-                            "theta_lab_center_deg/D");
-  si_pixel_map_tree->Branch("phi_lab_center_deg", &si_pixel_map_data.phi_lab_center_deg,
-                            "phi_lab_center_deg/D");
-
-  const auto pixel_map = SiArray::BuildPixelMap();
-  for (const auto& entry : pixel_map) {
-    si_pixel_map_data = entry;
-    si_pixel_map_tree->Fill();
-  }
-
-  G4cout << "----> event tree and " << pixel_map.size() << " Si pixel-map entries are ready in "
-         << output_path.string() << G4endl;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void RootIO::FillReactionTree(H11BReactionData& data)
+{
+  if (!reaction_tree) return;
+  reaction_data = data;
+  reaction_tree->Fill();
+}
+
+void RootIO::FillVirtualSphereTree(VirtualSphereData& data)
+{
+  if (!virtual_sphere_tree) return;
+  virtual_sphere_data = data;
+  virtual_sphere_tree->Fill();
+}
+
 void RootIO::FillEventTree(EventData& data)
 {
   if (!event_tree) return;
-
   event_data = data;
   event_tree->Fill();
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::CloseEventFile()
+void RootIO::CloseDataFile()
 {
-  if (!event_file) return;
+  if (!data_file) return;
 
-  event_file->cd();
-  if (event_tree) event_tree->Write();
+  data_file->cd();
+  // Explicit write order requested by the project data model.
   if (si_pixel_map_tree) si_pixel_map_tree->Write();
-  event_file->Close();
-  G4cout << "\n----> event tree and Si pixel map are saved.\n\n";
-}
+  if (reaction_tree) reaction_tree->Write();
+  if (virtual_sphere_tree) virtual_sphere_tree->Write();
+  if (event_tree) event_tree->Write();
+  if (run_info_tree) run_info_tree->Write();
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::OpenTrackFile()
-{
-  FillThreadedFileTag(file_name, sizeof(file_name));
-  G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
-
-  const auto output_path = HBOutputPath::MakeOutputFilePath("track", file_name);
-
-  track_file = new TFile(output_path.string().c_str(), "RECREATE");
-  if (!track_file) {
-    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
-    return;
-  }
-  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
-
-  track_tree = new TTree("tr", "track simulation data");
-  track_tree->Branch("event", &track_data.event, "event/L");
-  track_tree->Branch("track", &track_data.track, "track/I");
-  track_tree->Branch("e", &track_data.e, "e/D");
-  track_tree->Branch("x", &track_data.x, "x/D");
-  track_tree->Branch("y", &track_data.y, "y/D");
-  track_tree->Branch("z", &track_data.z, "z/D");
-  track_tree->Branch("ts", &track_data.ts, "ts/D");
-  track_tree->Branch("length", &track_data.length, "length/D");
-  track_tree->Branch("volume", track_data.volume, "volume/C");
-  track_tree->Branch("particle", track_data.particle, "particle/C");
-
-  if (!track_tree) {
-    G4cout << "\n can't create tree" << G4endl;
-    return;
-  }
-  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::FillTrackTree(TrackData& data)
-{
-  if (!track_tree) return;
-
-  track_data = data;
-  track_tree->Fill();
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::CloseTrackFile()
-{
-  if (!track_file) return;
-
-  track_file->cd();
-  if (track_tree) track_tree->Write();
-  track_file->Close();
-  G4cout << "\n----> track tree is saved.\n\n";
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::OpenStepFile()
-{
-  FillThreadedFileTag(file_name, sizeof(file_name));
-  G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
-
-  const auto output_path = HBOutputPath::MakeOutputFilePath("step", file_name);
-
-  step_file = new TFile(output_path.string().c_str(), "RECREATE");
-  if (!step_file) {
-    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
-    return;
-  }
-  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
-
-  step_tree = new TTree("tr", "step simulation data");
-  step_tree->Branch("event", &step_data.event, "event/L");
-  step_tree->Branch("track", &step_data.track, "track/I");
-  step_tree->Branch("de", &step_data.de, "de/D");
-  step_tree->Branch("pre_x", &step_data.pre_x, "pre_x/D");
-  step_tree->Branch("pre_y", &step_data.pre_y, "pre_y/D");
-  step_tree->Branch("pre_z", &step_data.pre_z, "pre_z/D");
-  step_tree->Branch("pre_total_energy", &step_data.pre_total_energy, "pre_total_energy/D");
-  step_tree->Branch("pre_kine_energy", &step_data.pre_kine_energy, "pre_kine_energy/D");
-  step_tree->Branch("post_x", &step_data.post_x, "post_x/D");
-  step_tree->Branch("post_y", &step_data.post_y, "post_y/D");
-  step_tree->Branch("post_z", &step_data.post_z, "post_z/D");
-  step_tree->Branch("post_total_energy", &step_data.post_total_energy, "post_total_energy/D");
-  step_tree->Branch("post_kine_energy", &step_data.post_kine_energy, "post_kine_energy/D");
-  step_tree->Branch("length", &step_data.length, "length/D");
-  step_tree->Branch("volume", step_data.volume, "volume/C");
-  step_tree->Branch("particle", step_data.particle, "particle/C");
-  step_tree->Branch("process", step_data.process, "process/C");
-
-  if (!step_tree) {
-    G4cout << "\n can't create tree" << G4endl;
-    return;
-  }
-  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::FillStepTree(StepData& data)
-{
-  if (!step_tree) return;
-
-  step_data = data;
-  step_tree->Fill();
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void RootIO::CloseStepFile()
-{
-  if (!step_file) return;
-
-  step_file->cd();
-  if (step_tree) step_tree->Write();
-  step_file->Close();
-  G4cout << "\n----> step tree is saved.\n\n";
+  data_file->Close();
+  delete data_file;
+  data_file = nullptr;
+  si_pixel_map_tree = nullptr;
+  reaction_tree = nullptr;
+  virtual_sphere_tree = nullptr;
+  event_tree = nullptr;
+  run_info_tree = nullptr;
+  G4cout << "\n----> unified ROOT output saved.\n\n";
 }

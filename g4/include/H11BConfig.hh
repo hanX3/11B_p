@@ -8,6 +8,9 @@
 #include <utility>
 
 namespace H11BConfig {
+void Set162Alpha0BranchingFraction(G4double value);
+G4double Get162Alpha0BranchingFraction();
+
 G4bool GetEnable162PrimaryAngularDistribution();
 void SetEnable162PrimaryAngularDistribution(G4bool enabled);
 void Set162PrimaryAngularA1(G4double value);

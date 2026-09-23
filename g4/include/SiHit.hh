@@ -3,6 +3,7 @@
 
 #include "G4Allocator.hh"
 #include "G4THitsCollection.hh"
+#include "G4ThreeVector.hh"
 #include "G4UnitsTable.hh"
 #include "G4VHit.hh"
 
@@ -10,8 +11,8 @@
 #include "tls.hh"
 
 // Logical DSSD readout sides.  The mapping used by SiSD is:
-//   Front: W1 local-x / azimuthal strip; S3 angular-sector strip.
-//   Back : W1 local-y / polar strip;     S3 radial-ring strip.
+//   Front: W1 local-x; Lampshade transverse sector; S3 angular sector.
+//   Back : W1 local-y; Lampshade longitudinal ring; S3 radial ring.
 enum class SiReadoutSide : G4int
 {
   Front = 0,
@@ -51,9 +52,33 @@ public:
   {
     time_ns = time;
   }
+  void SetTrackId(G4int id)
+  {
+    track_id = id;
+  }
+  void SetParentId(G4int id)
+  {
+    parent_id = id;
+  }
+  void SetPdg(G4int value)
+  {
+    pdg = value;
+  }
+  void SetEntryPosition(const G4ThreeVector& position)
+  {
+    if (has_entry_position) return;
+    entry_position = position;
+    has_entry_position = true;
+  }
   void AddEdep(G4double de)
   {
     e_dep += de;
+  }
+  void AddEdepAtPosition(G4double de, const G4ThreeVector& position)
+  {
+    if (de <= 0.) return;
+    e_dep += de;
+    edep_weighted_position += position * de;
   }
 
   G4int GetDetectorId() const
@@ -76,13 +101,39 @@ public:
   {
     return e_dep;
   }
+  G4int GetTrackId() const
+  {
+    return track_id;
+  }
+  G4int GetParentId() const
+  {
+    return parent_id;
+  }
+  G4int GetPdg() const
+  {
+    return pdg;
+  }
+  const G4ThreeVector& GetEntryPosition() const
+  {
+    return entry_position;
+  }
+  G4ThreeVector GetEdepWeightedPosition() const
+  {
+    return e_dep > 0. ? edep_weighted_position / e_dep : G4ThreeVector();
+  }
 
 private:
   G4int detector_id = -1;
   G4int readout_side = -1;
   G4int strip_id = -1;
+  G4int track_id = -1;
+  G4int parent_id = -1;
+  G4int pdg = 0;
   G4double time_ns = 0.;
   G4double e_dep = 0.;
+  G4bool has_entry_position = false;
+  G4ThreeVector entry_position;
+  G4ThreeVector edep_weighted_position;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 
 namespace {
 G4double g_cross_section_bias_factor = 1.0;
@@ -18,6 +19,39 @@ G4double g_162_bw_scale_factor = 1.0;
 G4double g_675_scale_factor = 1.0;
 
 constexpr G4double H11B675GammaRelativeIntensitySum = 15.7 + 100.0 + 6.8 + 0.16;
+
+G4double LogExpm1Positive(G4double x)
+{
+  // log(expm1(x)) without overflowing exp(x) in the Coulomb-suppressed
+  // low-energy tail.
+  if (x > 50.0) return x + std::log1p(-std::exp(-x));
+  return std::log(std::expm1(x));
+}
+
+G4double LogS0CoulombPenetrabilityApprox(G4double energy_cm_keV)
+{
+  if (energy_cm_keV <= 0.) return -std::numeric_limits<G4double>::infinity();
+
+  // Mirror s_wave_penetrability_approx() in
+  // cs_model/plot_675_bw_coulomb_exact_literature.py:
+  //
+  //   P0(E) proportional to rho C0(eta)^2,
+  //   rho = k a,
+  //   C0(eta)^2 = 2 pi eta / [exp(2 pi eta) - 1].
+  constexpr G4double project_z = 1.0;
+  constexpr G4double target_z = 5.0;
+  constexpr G4double alpha_fine_structure = 1.0 / 137.035999084;
+  constexpr G4double reduced_mass_keV = (11.0 / 12.0) * 931494.10242;
+  constexpr G4double hbarc_keV_fm = 197326.9804;
+
+  const G4double velocity_over_c = std::sqrt(2.0 * energy_cm_keV / reduced_mass_keV);
+  const G4double eta = project_z * target_z * alpha_fine_structure / velocity_over_c;
+  const G4double two_pi_eta = twopi * eta;
+  const G4double k_fm_inverse = std::sqrt(2.0 * reduced_mass_keV * energy_cm_keV) / hbarc_keV_fm;
+  const G4double rho = k_fm_inverse * (H11B675ChannelRadius / fermi);
+
+  return std::log(rho) + std::log(two_pi_eta) - LogExpm1Positive(two_pi_eta);
+}
 
 G4double ClampBranchFraction(G4double fraction)
 {
@@ -66,12 +100,10 @@ H11BCrossSectionComponents H11BCrossSection::CalculateComponents(G4double kineti
   H11BCrossSectionComponents components;
   components.sigma_162_model = GetSigma162(energy_cm_keV) * cm2;
 
-  // 675-region component: Wang-2026 S-factor parameterization (segments
-  // S2/S3 plus the S1 quadratic background; the 148-keV Lorentzian of S1 is
-  // omitted because the 16.11 MeV resonance is handled by the
-  // penetrability-corrected Breit-Wigner GetSigma162).  This is not an
-  // isolated 675-keV Breit-Wigner resonance.
-  components.sigma_675_model = GetWang675CrossSection(kinetic_energy_lab);
+  // Isolated 675-keV single-level Breit-Wigner with an energy-dependent
+  // s-wave proton width and Coulomb suppression. Parameters and the
+  // penetrability approximation mirror the model in cs_model.
+  components.sigma_675_model = Get675BreitWignerCrossSection(kinetic_energy_lab);
 
   components.sigma_162_total = std::max(0.0, g_162_bw_scale_factor) * components.sigma_162_model;
   components.sigma_675_total = std::max(0.0, g_675_scale_factor) * components.sigma_675_model;
@@ -92,7 +124,7 @@ H11BCrossSectionComponents H11BCrossSection::CalculateComponents(G4double kineti
 
   components.sigma_total = components.sigma_162 + components.sigma_675 + components.sigma_directdecay;
   // Backward-compatible diagnostic alias for the only remaining 3-alpha model:
-  // scaled 162 BW plus scaled fit675, independent of the sequential/direct split.
+  // scaled 162 BW plus scaled 675 BW, independent of the sequential/direct split.
   components.sigma_eval = components.sigma_total;
   components.cross_section_bias_factor = g_cross_section_bias_factor;
   components.direct_decay_fraction =
@@ -297,56 +329,45 @@ G4double H11BCrossSection::Get675GammaTotalCrossSection(G4double sigma_675_effec
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double H11BCrossSection::GetWang675CrossSection(G4double kinetic_energy_lab)
+G4double H11BCrossSection::Get675BreitWignerCrossSection(G4double kinetic_energy_lab)
 {
-  // Piecewise analytic S-factor parameterization of the p+11B total cross
-  // section from Wang et al. 2026 (arXiv:2601.00241), fitted to Becker 1987 +
-  // Mazzucconi 2025 (EPJ A 61, 114) data:
+  // Single-level Breit-Wigner used by
+  // cs_model/plot_675_bw_coulomb_exact_literature.py:
   //
-  //   sigma(E) = S(E)/E * exp(-sqrt(EG/E)),  EG = 22.589 MeV,  E = c.m. energy.
+  //   Gamma_p(E) = Gamma_p(Er) P0(E) / P0(Er)
+  //   Gamma(E)   = Gamma_p(E) + Gamma_out
   //
-  // The 148-keV Lorentzian term of their low-energy segment is INTENTIONALLY
-  // OMITTED here: the narrow 16.11 MeV resonance is described by the
-  // penetrability-corrected single-level Breit-Wigner (GetSigma162) instead,
-  // so this function returns only the smooth 675-region / background part.
-  // The Gamow factor gives the physical low-energy suppression, so no
-  // low-energy clamp is required (unlike the legacy Chebyshev fit).
-  // Parameterization is valid up to 10 MeV c.m. per the reference.
+  // with P0(E) proportional to rho C0(eta)^2. Er(lab)=675 keV,
+  // Gamma_p(Er)=150 keV, Gamma_out=150 keV, and omega=5/8 for J=2.
 
   if (kinetic_energy_lab <= 0.) return 0.;
 
-  const G4double e_cm_MeV = GetEcmValue(1., 11., kinetic_energy_lab / keV) / 1000.0;
-  if (e_cm_MeV <= 0.) return 0.;
+  const G4double energy_cm_keV = GetEcmValue(1., 11., kinetic_energy_lab / keV);
+  const G4double resonance_energy_keV = H11B675ResonanceEnergy / keV;
+  if (energy_cm_keV <= 0. || resonance_energy_keV <= 0.) return 0.;
 
-  constexpr G4double eg_MeV = 22.589;
-  const G4double x_keV = 1000.0 * e_cm_MeV;
+  const G4double log_penetrability_ratio =
+    LogS0CoulombPenetrabilityApprox(energy_cm_keV) -
+    LogS0CoulombPenetrabilityApprox(resonance_energy_keV);
+  if (log_penetrability_ratio < -700.0) return 0.;
 
-  G4double s_MeV_b = 0.0;
-  if (e_cm_MeV <= 0.400) {
-    // Segment 1 quadratic background (148-keV Lorentzian omitted, see above).
-    s_MeV_b = 197.0 + 0.240 * x_keV + 2.31e-4 * x_keV * x_keV;
-  } else if (e_cm_MeV <= 0.700) {
-    // Segment 2: 675-region polynomial.
-    const G4double x = (x_keV - 400.0) / 100.0;
-    s_MeV_b = 330.2 + 102.436 * x - 58.481 * x * x + 0.0933 * x * x * x * x * x;
-  } else {
-    // Segment 3: constant + five Lorentzian terms (centers/widths in keV).
-    constexpr G4double base = 0.209689;
-    constexpr G4double amp[5]    = {2.0235e6, 4.0102e6, 1.3220e6, 4.9451e6, 4.3430e5};
-    constexpr G4double center[5] = {622.2, 1388.4, 2492.4, 3528.6, 4703.6};
-    constexpr G4double width[5]  = {99.6, 449.9, 238.6, 398.5, 152.5};
-    s_MeV_b = base;
-    for (int k = 0; k < 5; ++k) {
-      const G4double d = x_keV - center[k];
-      s_MeV_b += amp[k] / (d * d + width[k] * width[k]);
-    }
-  }
+  const G4double proton_width_keV =
+    (H11B675ProtonWidth / keV) * std::exp(log_penetrability_ratio);
+  const G4double exit_width_keV = H11B675Alpha1Width / keV;
+  const G4double total_width_keV = proton_width_keV + exit_width_keV;
+  const G4double energy_offset_keV = energy_cm_keV - resonance_energy_keV;
+  const G4double denominator =
+    energy_offset_keV * energy_offset_keV + total_width_keV * total_width_keV / 4.0;
 
-  const G4double gamow_arg = std::sqrt(eg_MeV / e_cm_MeV);
-  if (gamow_arg > 700.0) return 0.;  // exp underflow guard
+  constexpr G4double reduced_mass_keV = (11.0 / 12.0) * 931494.10242;
+  constexpr G4double hbarc_keV_fm = 197326.9804;
+  const G4double k_fm_inverse =
+    std::sqrt(2.0 * reduced_mass_keV * energy_cm_keV) / hbarc_keV_fm;
+  const G4double sigma_fm2 =
+    pi / (k_fm_inverse * k_fm_inverse) * H11B675SpinStatFactor *
+    proton_width_keV * exit_width_keV / denominator;
 
-  const G4double sigma_b = s_MeV_b / e_cm_MeV * std::exp(-gamow_arg);
-  return std::max(0.0, sigma_b) * barn;
+  return std::max(0.0, sigma_fm2 / 100.0) * barn;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

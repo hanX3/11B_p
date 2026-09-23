@@ -142,6 +142,8 @@ constexpr G4double H11B162TotalWidth = 5.3 * keV;
 constexpr G4double H11B162ProtonWidth = 0.0215 * keV;
 constexpr G4double H11B162Alpha0Width = 0.26 * keV;
 constexpr G4double H11B162Alpha1Width = 5.0 * keV;
+constexpr G4double H11BDefault162Alpha0BranchingFraction =
+    H11B162Alpha0Width / (H11B162Alpha0Width + H11B162Alpha1Width);
 constexpr G4double H11B162Gamma0Width = 0.66 * eV;
 constexpr G4double H11B162Gamma1Width = 18.0 * eV;
 constexpr G4double H11B162GammaWidth = H11B162Gamma0Width + H11B162Gamma1Width;
@@ -151,13 +153,20 @@ constexpr G4double H11B162SpinStatFactor = 5.0 / 8.0;
 // alpha0 channel by parity conservation, so the 675-keV alpha0 width is fixed
 // to zero in this model.
 constexpr G4double H11B675Alpha0Width = 0.0 * keV;
+constexpr G4double H11B675ResonanceLabEnergy = 675.0 * keV;
+constexpr G4double H11B675ResonanceEnergy = (11.0 / 12.0) * H11B675ResonanceLabEnergy;
+constexpr G4double H11B675ProtonWidth = 150.0 * keV;
 constexpr G4double H11B675Alpha1Width = 150.0 * keV;
-
-// The entrance-channel proton width is always calculated using the full
-// Coulomb penetrability ratio P_l(E) / P_l(E_r).
+constexpr G4double H11B675TotalWidth = H11B675ProtonWidth + H11B675Alpha1Width;
+constexpr G4double H11B675SpinStatFactor = 5.0 / 8.0;
+constexpr G4double H11B675ChannelRadius = 4.5 * fermi;
 
 // Entrance-channel orbital angular momentum for p + 11B.
+// The 162-keV model uses the full tabulated Coulomb penetrability. The
+// 675-keV model uses the low-energy P0 proportional to rho*C0(eta)^2
+// approximation from cs_model/plot_675_bw_coulomb_exact_literature.py.
 constexpr G4int H11B162EntranceOrbitalL = 1; // likely p-wave
+constexpr G4int H11B675EntranceOrbitalL = 0; // s-wave for the 2- resonance
 
 // Use full Coulomb penetrability for 8Be(2+) -> alpha + alpha line shape.
 constexpr G4bool H11BUseFullCoulombPenetrabilityFor8Be2Plus = true;

@@ -170,48 +170,43 @@ if ! command -v hadd >/dev/null 2>&1; then
   exit 1
 fi
 
-merge_class() {
-  local class_name="$1"
-  local pattern="^${class_name}_.*_t[0-9]+\.root$"
+merge_unified_output() {
   local files=()
 
   for f in "${NEW_ROOT_FILES[@]}"; do
     local base
     base="$(basename "${f}")"
-    if [[ "${base}" =~ ${pattern} ]]; then
+    if [[ "${base}" =~ ^[0-9]{8}_[0-9]{2}h[0-9]{2}m[0-9]{2}s_t[0-9]+\.root$ ]]; then
       files+=("${f}")
     fi
   done
 
   if [[ "${#files[@]}" -eq 0 ]]; then
-    echo "No ${class_name} thread ROOT files generated; skipping ${class_name} hadd."
+    echo "No unified thread ROOT files were generated; skipping hadd."
     return 0
   fi
 
   if [[ "${#files[@]}" -eq 1 ]]; then
-    echo "Only one ${class_name} thread ROOT file generated; no ${class_name} hadd needed:"
+    echo "Only one unified ROOT file was generated; no hadd needed:"
     echo "  ${files[0]}"
     return 0
   fi
 
-  local out_file="${DATA_DIR}/${class_name}_merged_${TAG}.root"
+  local out_file="${DATA_DIR}/${TAG}_merged.root"
   echo "============================================================"
-  echo "Merging ${class_name} ROOT files"
+  echo "Merging unified ROOT files"
   echo "============================================================"
   echo "Output: ${out_file}"
   hadd -f "${out_file}" "${files[@]}"
 
   if [[ "${CLEAN_THREADS:-1}" == "1" ]]; then
-    echo "CLEAN_THREADS=1, deleting ${class_name} thread files:"
+    echo "CLEAN_THREADS=1, deleting thread files:"
     printf '  %s\n' "${files[@]}"
     rm -f "${files[@]}"
   fi
 }
 
-merge_class reaction
-merge_class event
-merge_class track
-merge_class step
+merge_unified_output
 
 # ---------------------------------------------------------------------
 # Append a provenance record to data.log (next to HB.cc): which merged
@@ -223,15 +218,10 @@ LOG_FILE="${PROJECT_ROOT}/data.log"
   echo "======================================================================"
   echo "run tag : ${TAG}   date : $(date '+%Y-%m-%d %H:%M:%S')   threads : ${THREADS}"
   echo "--- merged output files ---"
-  merged_found=0
-  for cls in reaction event track step; do
-    mf="${DATA_DIR}/${cls}_merged_${TAG}.root"
-    if [[ -f "${mf}" ]]; then
-      echo "  ${mf}"
-      merged_found=1
-    fi
-  done
-  if [[ "${merged_found}" -eq 0 ]]; then
+  merged_file="${DATA_DIR}/${TAG}_merged.root"
+  if [[ -f "${merged_file}" ]]; then
+    echo "  ${merged_file}"
+  else
     printf '  %s\n' "${NEW_ROOT_FILES[@]}"
   fi
   echo "--- effective macro commands ---"
@@ -245,4 +235,4 @@ echo "Provenance appended to ${LOG_FILE}"
 echo "============================================================"
 echo "Batch run complete"
 echo "============================================================"
-echo "Merged files are in ${DATA_DIR} with tag ${TAG}."
+echo "Unified ROOT output is in ${DATA_DIR} with tag ${TAG}."

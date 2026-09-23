@@ -87,10 +87,10 @@ namespace HBOutputPath
     return LocateProjectRoot() / "data";
   }
 
-  std::filesystem::path MakeOutputFilePath(const std::string& prefix, const char* file_tag)
+  std::filesystem::path MakeOutputFilePath(const char* file_tag)
   {
     EnsureDataDirectory();
-    return DataDirectory() / (prefix + "_" + std::string(file_tag) + ".root");
+    return DataDirectory() / (std::string(file_tag) + ".root");
   }
 
   void EnsureDataDirectory()

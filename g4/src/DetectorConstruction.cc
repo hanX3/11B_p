@@ -7,6 +7,7 @@
 
 #include "G4Box.hh"
 #include "G4Tubs.hh"
+#include "G4Sphere.hh"
 #include "G4Polycone.hh"
 #include "G4UnionSolid.hh"
 #include "G4LogicalVolume.hh"
@@ -24,6 +25,9 @@
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
 
+#include "VirtualSphereConfig.hh"
+#include "VirtualSphereSD.hh"
+
 #include "G4SystemOfUnits.hh"
 
 #include <string>
@@ -33,6 +37,7 @@
 DetectorConstruction::DetectorConstruction()
 {
   si_array = nullptr;
+  virtual_sphere_log = nullptr;
   hpge_array = nullptr;
   labr3_array = nullptr;
 
@@ -149,6 +154,24 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     target_backing_reg->AddRootLogicalVolume(target_backing_log);
   }
 
+  // Non-physical scoring shell.  It is made from the same G4_Galactic
+  // material as the chamber vacuum, so crossing it introduces no material
+  // energy loss.  Its only role is to provide a well-defined sensitive
+  // boundary outside the target and inside the silicon array.
+  if (VirtualSphereConfig::GetEnabled()) {
+    const G4double inner_radius = VirtualSphereConfig::GetRadius();
+    const G4double outer_radius = inner_radius + VirtualSphereConfig::GetThickness();
+    auto sphere_solid = new G4Sphere("VirtualSphereSolid", inner_radius, outer_radius,
+                                     0. * deg, 360. * deg, 0. * deg, 180. * deg);
+    virtual_sphere_log = new G4LogicalVolume(sphere_solid, vaccum_mat, "VirtualSphereLog");
+    new G4PVPlacement(nullptr, G4ThreeVector(0., 0., TargetZPos), virtual_sphere_log,
+                      "VirtualSphere", chamber_vacuum_log, false, 0, check_overlaps);
+
+    auto sphere_vis = new G4VisAttributes(G4Colour(0.1, 0.8, 0.9, 0.25));
+    sphere_vis->SetForceWireframe(true);
+    virtual_sphere_log->SetVisAttributes(sphere_vis);
+  }
+
   // G4Region for Cut
   G4Region* chamber_shell_reg = new G4Region("ChamberShell");
   chamber_shell_reg->AddRootLogicalVolume(chamber_shell_log);
@@ -207,6 +230,12 @@ void DetectorConstruction::ConstructSDandField()
   sd_manager->AddNewDetector(labr3_sd);
   if (labr3_array)
     labr3_array->MakeSensitive(labr3_sd);
+
+  if (virtual_sphere_log && VirtualSphereConfig::GetEnabled()) {
+    auto virtual_sphere_sd = new VirtualSphereSD("VirtualSphereSD", "VirtualSphereHitCollection");
+    sd_manager->AddNewDetector(virtual_sphere_sd);
+    virtual_sphere_log->SetSensitiveDetector(virtual_sphere_sd);
+  }
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

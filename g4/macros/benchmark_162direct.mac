@@ -1,0 +1,73 @@
+# =====================================================================
+# Pure benchmark channel: 162direct
+#   p + 11B -> 12C*(16.11-MeV region) -> direct three-alpha phase space
+#
+# Expected detailed label:
+#   h11b_reaction_channel = 3
+#
+# Saves both generator truth (reaction) and transported momenta at the
+# 25-mm virtual sphere.  Detector response is intentionally disabled.
+# =====================================================================
+
+# Geometry commands must be issued before /run/initialize.
+/virtualSphere/enabled true
+/virtualSphere/radius 25 mm
+/virtualSphere/thickness 1 um
+/virtualSphere/saveElectrons false
+/virtualSphere/saveOpticalPhotons false
+/virtualSphere/minKineticEnergy 0 keV
+
+# Point beam at the nominal beam axis
+/beam/profile point
+/beam/offsetX 0 mm
+/beam/offsetY 0 mm
+/beam/z 0 mm
+/beam/printConfig
+
+/target/thickness 0.12 um
+/target/backing false
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 162 keV
+
+/output/saveReaction true
+/output/saveVirtualSphere true
+/output/saveEvent false
+
+# Increase only the sampled reaction rate.
+/h11b/crossSectionBiasFactor 1000000000
+
+# Isolate the 162-keV contribution.
+/h11b/162BWScaleFactor 1.0
+/h11b/675ScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+# Select a pure direct three-alpha sample.
+/h11b/enableDirectDecay true
+/h11b/162SequentialDecayFraction 0.0
+
+# This value is inactive when the sequential fraction is zero, but is kept
+# at the evaluated default so the printed configuration remains explicit.
+/h11b/162Alpha0BranchingFraction 0.0494296578
+
+# These settings do not alter direct phase space, but keeping them identical
+# across all benchmark macros makes the configuration comparison unambiguous.
+/h11b/enable162PrimaryAngularDistribution true
+/h11b/enable162Alpha1SecondaryAngularCorrelation true
+/h11b/162Alpha1SecondaryA2 -0.489
+/h11b/162Alpha1SecondaryA4 0.647
+
+/virtualSphere/printConfig
+/output/printConfig
+/h11b/printConfig
+
+/run/beamOn 1000000
+

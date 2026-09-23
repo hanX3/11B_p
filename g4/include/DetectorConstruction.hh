@@ -91,6 +91,7 @@ private:
 private:
   //
   G4LogicalVolume* world_log;
+  G4LogicalVolume* virtual_sphere_log;
 
   //
   G4Material* air_mat;

@@ -4,7 +4,6 @@
 #include "PrimaryGeneratorAction.hh"
 #include "RootIO.hh"
 #include "RunAction.hh"
-#include "SteppingAction.hh"
 #include "TrackingAction.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -29,6 +28,5 @@ void ActionInitialization::Build() const
   SetUserAction(new PrimaryGeneratorAction());
   SetUserAction(new RunAction(root_io));
   SetUserAction(new EventAction(root_io));
-  SetUserAction(new TrackingAction(root_io));
-  SetUserAction(new SteppingAction(root_io));
+  SetUserAction(new TrackingAction());
 }

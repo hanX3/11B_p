@@ -1,10 +1,12 @@
 #include "ActionInitialization.hh"
+#include "BeamConfig.hh"
 #include "Constants.hh"
 #include "DetectorConstruction.hh"
 #include "PhysicsList.hh"
 #include "OutputConfig.hh"
 #include "OutputPath.hh"
 #include "SiArrayConfig.hh"
+#include "VirtualSphereConfig.hh"
 
 #include "G4RunManagerFactory.hh"
 #include "G4UImanager.hh"
@@ -110,10 +112,12 @@ int main(int argc, char** argv)
   }
 
   auto output_config = std::make_unique<OutputConfig>();
+  auto beam_config = std::make_unique<BeamConfig>();
   // Si array geometry / strip-segmentation controls under /si/.  Constructed
   // before /run/initialize so geometry-affecting values can be set from a macro
   // ahead of DetectorConstruction, and runs a copy_no encoding self-test.
   auto si_array_config = std::make_unique<SiArrayConfig>();
+  auto virtual_sphere_config = std::make_unique<VirtualSphereConfig>();
 
   auto detector = new DetectorConstruction();
   run_manager->SetUserInitialization(detector);

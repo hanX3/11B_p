@@ -14,7 +14,7 @@
 # The branch split follows these internal intensities automatically;
 # there is no user knob for it.
 #
-# Read from the reaction tree ("tr"), selecting gamma events with
+# Read from the `reaction` tree, selecting gamma events with
 # gamma_branch > 0 (675 branches have their own gamma_branch codes;
 # check printConfig / DataStructure for the exact ids):
 #   gamma1_energy, gamma2_energy : LAB energies (MeV; Doppler-shifted)
@@ -36,7 +36,7 @@
 #   * 162 gamma capture OFF for a clean 675 sample; 162 alpha channel
 #     also shut off via its scale factor.
 #   * sigma_gamma_675 = 1e-5 * sigma_675_model in the current code --
-#     absolute gamma yield inherits the Wang-2026 normalization.
+#     absolute gamma yield inherits the 675-keV BW normalization.
 # =====================================================================
 
 /run/initialize
@@ -52,8 +52,7 @@
 # --- output: only the reaction tree is needed ---
 /output/saveReaction true
 /output/saveEvent false
-/output/saveTrack false
-/output/saveStep false
+/output/saveVirtualSphere false
 
 # --- open the cross section wide (rate only; kinematics untouched) ---
 /h11b/crossSectionBiasFactor 1000000000
@@ -73,6 +72,10 @@
 # --- isolate the 675 resonance: shut the 162 channel down ---
 /h11b/162SequentialDecayFraction 1.0
 /h11b/162BWScaleFactor 0.0
+
+# Remove the competing 675 three-alpha branch. The 675 gamma cross section
+# is calculated from sigma_675_model before this alpha-channel scale is applied.
+/h11b/675ScaleFactor 0.0
 
 /h11b/printConfig
 /output/printConfig

@@ -1,0 +1,71 @@
+# =====================================================================
+# Control channel: 162seq_Be2plus with the secondary angular
+# correlation FORCED OFF (isotropic 8Be(2+) break-up).
+#
+#   p + 11B -> 12C*(16.11 MeV, 2+) -> alpha + 8Be(2+) -> 3 alpha
+#
+# Same pure alpha1 sequential sample as benchmark_162seq_Be2plus.mac,
+# but /h11b/enable162Alpha1SecondaryAngularCorrelation is set to false
+# so the 8Be(2+) -> alpha + alpha decay is isotropic. Use this run as
+# the "secondary off" Dalitz panel: the triangular A2/A4 structure
+# should disappear and leave the phase-space-modulated baseline.
+#
+# Expected detailed label:
+#   h11b_reaction_channel = 2
+# =====================================================================
+
+# Geometry commands must be issued before /run/initialize.
+/virtualSphere/enabled true
+/virtualSphere/radius 25 mm
+/virtualSphere/thickness 1 um
+/virtualSphere/saveElectrons false
+/virtualSphere/saveOpticalPhotons false
+/virtualSphere/minKineticEnergy 0 keV
+
+# Point beam at the nominal beam axis
+/beam/profile point
+/beam/offsetX 0 mm
+/beam/offsetY 0 mm
+/beam/z 0 mm
+/beam/printConfig
+
+/target/thickness 0.12 um
+/target/backing false
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 162 keV
+
+/output/saveReaction true
+/output/saveVirtualSphere true
+/output/saveEvent false
+
+# Increase only the sampled reaction rate.
+/h11b/crossSectionBiasFactor 1000000000
+
+# Isolate the 162-keV contribution.
+/h11b/162BWScaleFactor 1.0
+/h11b/675ScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+# Select a pure sequential 8Be(2+) sample.
+/h11b/enableDirectDecay false
+/h11b/162SequentialDecayFraction 1.0
+/h11b/162Alpha0BranchingFraction 0.0
+
+# Primary angular physics unchanged; secondary correlation FORCED OFF.
+/h11b/enable162PrimaryAngularDistribution true
+/h11b/enable162Alpha1SecondaryAngularCorrelation false
+
+/virtualSphere/printConfig
+/output/printConfig
+/h11b/printConfig
+
+/run/beamOn 1000000

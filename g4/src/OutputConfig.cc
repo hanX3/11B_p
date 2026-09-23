@@ -6,8 +6,7 @@
 namespace {
 G4bool g_save_reaction = true;
 G4bool g_save_event = false;
-G4bool g_save_track = false;
-G4bool g_save_step = false;
+G4bool g_save_virtual_sphere = false;
 } // namespace
 
 OutputConfig::OutputConfig()
@@ -27,14 +26,9 @@ G4bool OutputConfig::GetSaveEvent()
   return g_save_event;
 }
 
-G4bool OutputConfig::GetSaveTrack()
+G4bool OutputConfig::GetSaveVirtualSphere()
 {
-  return g_save_track;
-}
-
-G4bool OutputConfig::GetSaveStep()
-{
-  return g_save_step;
+  return g_save_virtual_sphere;
 }
 
 void OutputConfig::SetSaveReaction(G4bool enabled)
@@ -47,14 +41,9 @@ void OutputConfig::SetSaveEvent(G4bool enabled)
   g_save_event = enabled;
 }
 
-void OutputConfig::SetSaveTrack(G4bool enabled)
+void OutputConfig::SetSaveVirtualSphere(G4bool enabled)
 {
-  g_save_track = enabled;
-}
-
-void OutputConfig::SetSaveStep(G4bool enabled)
-{
-  g_save_step = enabled;
+  g_save_virtual_sphere = enabled;
 }
 
 void OutputConfig::SetSaveReactionCommand(G4bool enabled)
@@ -67,37 +56,29 @@ void OutputConfig::SetSaveEventCommand(G4bool enabled)
   SetSaveEvent(enabled);
 }
 
-void OutputConfig::SetSaveTrackCommand(G4bool enabled)
+void OutputConfig::SetSaveVirtualSphereCommand(G4bool enabled)
 {
-  SetSaveTrack(enabled);
-}
-
-void OutputConfig::SetSaveStepCommand(G4bool enabled)
-{
-  SetSaveStep(enabled);
+  SetSaveVirtualSphere(enabled);
 }
 
 void OutputConfig::PrintConfigCommand()
 {
   G4cout << "\n===== Output runtime configuration =====" << G4endl
-         << "  saveReaction = " << (GetSaveReaction() ? "true" : "false") << G4endl
-         << "  saveEvent    = " << (GetSaveEvent() ? "true" : "false") << G4endl
-         << "  saveTrack    = " << (GetSaveTrack() ? "true" : "false") << G4endl
-         << "  saveStep     = " << (GetSaveStep() ? "true" : "false") << G4endl;
+         << "  saveReaction      = " << (GetSaveReaction() ? "true" : "false") << G4endl
+         << "  saveEvent         = " << (GetSaveEvent() ? "true" : "false") << G4endl
+         << "  saveVirtualSphere = " << (GetSaveVirtualSphere() ? "true" : "false") << G4endl;
 }
 
 void OutputConfig::DefineCommands()
 {
-  messenger = std::make_unique<G4GenericMessenger>(this, "/output/", "ROOT output controls");
+  messenger = std::make_unique<G4GenericMessenger>(this, "/output/", "Unified ROOT output controls");
 
   messenger->DeclareMethod("saveReaction", &OutputConfig::SetSaveReactionCommand,
-                           "Enable or disable reaction ROOT output");
+                           "Enable or disable the reaction tree");
   messenger->DeclareMethod("saveEvent", &OutputConfig::SetSaveEventCommand,
-                           "Enable or disable detector-event ROOT output");
-  messenger->DeclareMethod("saveTrack", &OutputConfig::SetSaveTrackCommand,
-                           "Enable or disable track ROOT output");
-  messenger->DeclareMethod("saveStep", &OutputConfig::SetSaveStepCommand,
-                           "Enable or disable step ROOT output");
+                           "Enable or disable the detector event tree");
+  messenger->DeclareMethod("saveVirtualSphere", &OutputConfig::SetSaveVirtualSphereCommand,
+                           "Enable or disable the virtual_sphere tree");
   messenger->DeclareMethod("printConfig", &OutputConfig::PrintConfigCommand,
-                           "Print current ROOT output configuration");
+                           "Print current unified ROOT output configuration");
 }

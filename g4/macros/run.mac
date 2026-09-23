@@ -1,14 +1,22 @@
+# Virtual target-surrounding scoring sphere (geometry commands must precede initialization)
+/virtualSphere/enabled true
+/virtualSphere/radius 25 mm
+/virtualSphere/thickness 1 um
+/virtualSphere/saveElectrons false
+/virtualSphere/saveOpticalPhotons false
+/virtualSphere/minKineticEnergy 0 keV
+
 /run/initialize
 
 /control/verbose 2
 
 # ROOT output control
-# For generator-level validation, only reaction ROOT output is usually needed.
+# Save reaction generation and post-target virtual-sphere kinematics.
 /output/saveReaction true
-/output/saveEvent false
-/output/saveTrack false
-/output/saveStep false
+/output/saveEvent true
+/output/saveVirtualSphere true
 /output/printConfig
+/virtualSphere/printConfig
 
 
 #/tracking/verbose 1
@@ -18,7 +26,7 @@
 
 # Cross-section decomposition:
 #   162 total = 162-keV BW component, optionally scaled by 162BWScaleFactor
-#   675 total = fit675 component, optionally scaled by 675ScaleFactor
+#   675 total = Coulomb-suppressed BW component, optionally scaled by 675ScaleFactor
 #   each resonance total is split into sequential and direct-decay branches
 #   direct-decay fraction is automatically 1 - sequential-decay fraction
 /h11b/enableDirectDecay true
