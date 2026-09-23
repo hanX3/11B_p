@@ -104,7 +104,7 @@ private:
   static G4double Get162Gamma0CrossSection(G4double energy_cm_keV);
   static G4double Get162Gamma1CrossSection(G4double energy_cm_keV);
   static G4double Get675GammaTotalCrossSection(G4double sigma_675_model);
-  static G4double GetFit675CrossSection(G4double kinetic_energy_lab);
+  static G4double GetWang675CrossSection(G4double kinetic_energy_lab);
   static G4double GetSigmaBreitWigner(G4double energy_cm_keV, G4double resonance_energy, G4double total_width, G4double entrance_width_at_resonance, G4double exit_width_at_resonance, G4double spin_stat_factor, G4int entrance_orbital_l);
   static G4double GetFullCoulombEntranceWidth(G4double energy_cm_keV, G4double resonance_energy, G4double entrance_width_at_resonance, G4int entrance_orbital_l);
 };

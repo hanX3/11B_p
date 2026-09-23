@@ -10,8 +10,7 @@ from the tabulated full Coulomb penetrability, and a constant-width
 Breit-Wigner drawn for comparison.
 
 Outputs (written next to this script):
-  p11b_cs_165bw_slide.log.png
-  p11b_cs_165bw_slide_summary.txt
+  p11b_cs_162bw_slide.log.png
 """
 
 from __future__ import annotations
@@ -53,8 +52,7 @@ ECM_MIN_KEV = 50.0
 ECM_MAX_KEV = 400.0
 ECM_STEP_KEV = 0.05
 
-OUTPUT_PLOT = "p11b_cs_165bw_slide.log.png"
-OUTPUT_SUMMARY = "p11b_cs_165bw_slide_summary.txt"
+OUTPUT_PLOT = "p11b_cs_162bw_slide.log.png"
 
 
 def extract_cpp_array(text: str, name: str) -> np.ndarray:
@@ -139,7 +137,6 @@ def main() -> None:
         s_c = sigma_bw_barn(np.array([e_probe]), 1.0)[0]
         lines.append(f"  Ecm = {e_probe:5.1f} keV : full/const = {s_f / s_c:.3e}")
     summary = "\n".join(lines) + "\n"
-    (SCRIPT_DIR / OUTPUT_SUMMARY).write_text(summary)
     print(summary)
 
     # ---- plot ----

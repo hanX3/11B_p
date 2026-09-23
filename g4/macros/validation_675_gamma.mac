@@ -1,0 +1,80 @@
+# =====================================================================
+# validation_675_gamma.mac
+#
+# Purpose: generate 675-keV GAMMA-CAPTURE events, 11B(p,gamma)12C
+#          from the 16.62 MeV (2-) region.
+#
+# Gamma branches (relative intensities hard-coded in the reaction,
+# kH11B675GammaRelativeLines):
+#   to 4.44 (2+)   : 100    (dominant, E1)   -> ~12.2 MeV + 4.44 MeV
+#   to g.s. (0+)   : 15.7   (M2-suppressed)  -> ~16.6 MeV
+#   to 12.71 (1+)  : 6.8                     -> ~3.9 MeV + daughter decay
+#   to 15.11 (1+)  : 0.16                    -> ~1.5 MeV + daughter decay
+#   to 7.65 (0+)   : <= 0.07 (upper limit)
+# The branch split follows these internal intensities automatically;
+# there is no user knob for it.
+#
+# Read from the reaction tree ("tr"), selecting gamma events with
+# gamma_branch > 0 (675 branches have their own gamma_branch codes;
+# check printConfig / DataStructure for the exact ids):
+#   gamma1_energy, gamma2_energy : LAB energies (MeV; Doppler-shifted)
+#   gamma_primary_energy_MeV     : emitter-rest-frame energy (sharp)
+#   gamma_final_state_energy_MeV : daughter 12C level
+#   cos_theta_gamma_cm, gamma1/2_theta_lab/cm, n_prompt_gammas
+#
+# Physics expectations:
+#   * primary gamma ISOTROPIC vs beam: the 2- is formed by s-wave
+#     protons (equal-m population) -- same rotational-invariance
+#     theorem as the alpha channel.  The W(theta) knob is left OFF
+#     (A1 = A2 = 0), matching run.mac.
+#   * branches to 12.71 / 15.11 populate levels ABOVE the 3-alpha
+#     threshold -> gamma-tagged 3-alpha final states.
+#
+# Notes:
+#   * gammaBiasFactor pulls the sampling toward the gamma channel;
+#     rate only, kinematics and branch ratios untouched.
+#   * 162 gamma capture OFF for a clean 675 sample; 162 alpha channel
+#     also shut off via its scale factor.
+#   * sigma_gamma_675 = 1e-5 * sigma_675_model in the current code --
+#     absolute gamma yield inherits the Wang-2026 normalization.
+# =====================================================================
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 675 keV
+
+# --- output: only the reaction tree is needed ---
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+
+# --- open the cross section wide (rate only; kinematics untouched) ---
+/h11b/crossSectionBiasFactor 1000000000
+
+# --- gamma channels: 675 ON, 162 OFF for a clean 675 sample ---
+/h11b/enable675GammaCapture true
+/h11b/enable162GammaCapture false
+
+# --- pull the sampling toward the gamma channel (rate only) ---
+/h11b/gammaBiasFactor 1000000
+
+# --- primary gamma angular: OFF (isotropic; s-wave formation) ---
+/h11b/enable675GammaAngularDistribution false
+/h11b/675GammaAngularA1 0.0
+/h11b/675GammaAngularA2 0.0
+
+# --- isolate the 675 resonance: shut the 162 channel down ---
+/h11b/162SequentialDecayFraction 1.0
+/h11b/162BWScaleFactor 0.0
+
+/h11b/printConfig
+/output/printConfig
+
+/run/beamOn 1000000

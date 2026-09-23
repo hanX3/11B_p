@@ -1,0 +1,73 @@
+# =====================================================================
+# validation_675_primary_spectrum_legacy.mac
+#
+# Purpose: generate 675-keV SEQUENTIAL events with the LEGACY generator
+#          (legacyLegendreA2A4), where the primary/secondary labels
+#          EXIST inside the model:
+#            e_alpha1          = primary alpha (true label)
+#            e_alpha2, e_alpha3 = 8Be* breakup alphas (true labels)
+#
+# Companion to validation_675_primary_spectrum.mac (strict model,
+# where symmetrization erases the labels and e_alpha1 is just one of
+# three equivalent alphas).
+#
+# Intended use -- spectrum decomposition check:
+#   incoherent expectation for the strict single-alpha spectrum
+#     = (1/3) * [e_alpha1 legacy] + (2/3) * [e_alpha2+e_alpha3 legacy]/2
+#   residual vs the strict run = size of the interference terms.
+#
+# Settings mirror the physics defaults of run.mac:
+#   * primary angular distribution OFF (isotropic; s-wave formation)
+#   * secondary A2/A4 correlation ON with the run.mac values
+#   * NOTE: the strict l1 = 1/3 coherence has NO counterpart here --
+#     that is exactly the model difference being probed.
+# =====================================================================
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 675 keV
+
+# --- output: only the reaction tree is needed ---
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+
+# --- open the cross section wide (rate only; kinematics untouched) ---
+/h11b/crossSectionBiasFactor 1000000000
+
+# --- force the sequential channel; direct 3-alpha off ---
+/h11b/enableDirectDecay false
+/h11b/675SequentialDecayFraction 1.0
+
+# --- LEGACY generator: primary/secondary labels exist ---
+/h11b/675AlphaDecayModel legacyLegendreA2A4
+
+# --- primary vs beam: isotropic (s-wave formation) ---
+/h11b/enable675PrimaryAngularDistribution false
+/h11b/675PrimaryAngularA1 0.0
+/h11b/675PrimaryAngularA2 0.0
+
+# --- secondary correlation: ON, run.mac values ---
+/h11b/enable675Alpha1SecondaryAngularCorrelation false
+/h11b/675Alpha1SecondaryA2 -1.064
+/h11b/675Alpha1SecondaryA4 0.180
+
+# --- isolate the 675 resonance: shut the 162 channel down ---
+/h11b/162SequentialDecayFraction 1.0
+/h11b/162BWScaleFactor 0.0
+
+# --- turn off gamma-capture competition for a clean 3a sample ---
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+/h11b/printConfig
+/output/printConfig
+
+/run/beamOn 1000000

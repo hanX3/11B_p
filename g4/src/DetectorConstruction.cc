@@ -18,6 +18,8 @@
 #include "G4GeometryManager.hh"
 
 #include "G4UserLimits.hh"
+#include "G4GenericMessenger.hh"
+#include "G4RunManager.hh"
 
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
@@ -54,6 +56,8 @@ DetectorConstruction::DetectorConstruction()
   SetTargetMaterial(TargetMaterial);
 
   SetTargetBackingFlag(TargetBackingFlag);
+
+  DefineCommands();
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -137,7 +141,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
   // Target Backing
   if (flag_target_backing) {
-    G4double z_target_backing = z_target + TargetThickness / 2. + TargetBackingThickness / 2.;
+    G4double z_target_backing = z_target + target_thickness / 2. + TargetBackingThickness / 2.;
     G4LogicalVolume* target_backing_log = GetTargetBackingLog("TargetBacking");
     new G4PVPlacement(nullptr, G4ThreeVector(0, 0, z_target_backing), target_backing_log, "TargetBacking", chamber_vacuum_log, false, 0, check_overlaps);
 
@@ -189,7 +193,7 @@ void DetectorConstruction::ConstructSDandField()
 {
   G4SDManager* sd_manager = G4SDManager::GetSDMpointer();
 
-  auto si_sd = new SiSD("SiSD", "SiHitCollection");
+  auto si_sd = new SiSD("SiSD", "SiFrontHitCollection", "SiBackHitCollection");
   sd_manager->AddNewDetector(si_sd);
   if (si_array)
     si_array->MakeSensitive(si_sd);
@@ -595,4 +599,73 @@ void DetectorConstruction::SetTargetMaterial(G4String str)
     return;
   }
   target_mat = mat;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+// /target/ messenger command wrappers.  Thickness / material / backing all
+// change the built geometry, so they are only meaningful before the geometry
+// is constructed (/run/initialize) or when followed by
+// /run/reinitializeGeometry.  We flag the geometry as modified so that a
+// subsequent /run/beamOn triggers a rebuild automatically.
+void DetectorConstruction::SetTargetThicknessCmd(G4double th)
+{
+  if (th <= 0.) {
+    G4cout << "[Target] ignoring non-positive thickness " << th / um << " um" << G4endl;
+    return;
+  }
+  SetTargetThickness(th);
+  G4RunManager::GetRunManager()->GeometryHasBeenModified();
+  G4cout << "[Target] thickness set to " << target_thickness / um << " um"
+         << " (geometry flagged for rebuild)" << G4endl;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void DetectorConstruction::SetTargetMaterialCmd(G4String str)
+{
+  SetTargetMaterial(str);
+  G4RunManager::GetRunManager()->GeometryHasBeenModified();
+  G4cout << "[Target] material set to " << str
+         << " (geometry flagged for rebuild)" << G4endl;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void DetectorConstruction::SetTargetBackingFlagCmd(G4bool bl)
+{
+  SetTargetBackingFlag(bl);
+  G4RunManager::GetRunManager()->GeometryHasBeenModified();
+  G4cout << "[Target] backing " << (bl ? "enabled" : "disabled")
+         << " (geometry flagged for rebuild)" << G4endl;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void DetectorConstruction::PrintTargetConfigCommand()
+{
+  G4cout << "==== Target configuration ====" << G4endl
+         << "  thickness = " << target_thickness / um << " um"
+         << " (" << target_thickness / mm << " mm)" << G4endl
+         << "  material  = "
+         << (target_mat ? target_mat->GetName() : G4String("<null>")) << G4endl
+         << "  backing   = " << (flag_target_backing ? "on" : "off") << G4endl;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void DetectorConstruction::DefineCommands()
+{
+  target_messenger = std::make_unique<G4GenericMessenger>(
+      this, "/target/", "Target geometry controls (thickness / material / backing)");
+
+  target_messenger->DeclareMethodWithUnit("thickness", "um",
+                                          &DetectorConstruction::SetTargetThicknessCmd,
+                                          "Target thickness (geometry; set before /run/initialize "
+                                          "or follow with /run/reinitializeGeometry). "
+                                          "Scan this for triple-coincidence efficiency vs thickness.");
+  target_messenger->DeclareMethod("material",
+                                  &DetectorConstruction::SetTargetMaterialCmd,
+                                  "Target material name (geometry; must already be defined)");
+  target_messenger->DeclareMethod("backing",
+                                  &DetectorConstruction::SetTargetBackingFlagCmd,
+                                  "Enable/disable the target backing (geometry)");
+  target_messenger->DeclareMethod("printConfig",
+                                  &DetectorConstruction::PrintTargetConfigCommand,
+                                  "Print current target configuration");
 }

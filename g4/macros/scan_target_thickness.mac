@@ -1,0 +1,83 @@
+# =====================================================================
+# scan_target_thickness.mac
+#
+# Purpose: demonstrate the /target/ messenger and run a triple-coincidence
+#          feasibility scan over target thickness.  With the default 5 mm
+#          11B target, forward-emitted alphas are absorbed before escaping,
+#          so the three alphas can seldom be detected in coincidence.  This
+#          macro sweeps the target from a Kuehlwein-like sub-micron foil up
+#          to the thick default, letting the analysis stage produce the
+#          "triple-coincidence efficiency vs target thickness" curve.
+#
+# IMPORTANT timing:
+#   /target/thickness is a GEOMETRY parameter.  It must be issued either
+#     (a) BEFORE /run/initialize, or
+#     (b) after a run, then followed by /run/reinitializeGeometry.
+#   The command flags the geometry as modified, so the next /run/beamOn
+#   rebuilds automatically; the explicit /run/reinitializeGeometry below is
+#   belt-and-braces and makes the rebuild point obvious.
+#
+# Units: /target/thickness takes a length; example uses um (also nm, mm).
+# =====================================================================
+
+# --- set the first thickness BEFORE initialize so it is built in ---
+/target/thickness 0.12 um
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 675 keV
+
+# --- output: reaction + hits needed for the coincidence analysis ---
+/output/saveReaction true
+/output/saveEvent true
+/output/saveTrack false
+/output/saveStep false
+
+# --- open the cross section wide (rate only; kinematics untouched) ---
+/h11b/crossSectionBiasFactor 1000000000
+
+# --- clean sequential 3-alpha sample at 675 keV ---
+/h11b/enableDirectDecay false
+/h11b/162SequentialDecayFraction 1.0
+/h11b/162BWScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+# ---------- point 1: 0.12 um (already built above) ----------
+/target/printConfig
+/run/beamOn 500000
+
+# ---------- point 2: 0.5 um ----------
+/target/thickness 0.5 um
+/run/reinitializeGeometry
+/target/printConfig
+/run/beamOn 500000
+
+# ---------- point 3: 2 um ----------
+/target/thickness 2.0 um
+/run/reinitializeGeometry
+/target/printConfig
+/run/beamOn 500000
+
+# ---------- point 4: 10 um ----------
+/target/thickness 10.0 um
+/run/reinitializeGeometry
+/target/printConfig
+/run/beamOn 500000
+
+# ---------- point 5: 100 um ----------
+/target/thickness 100.0 um
+/run/reinitializeGeometry
+/target/printConfig
+/run/beamOn 500000
+
+# ---------- point 6: 5 mm (thick default, forward alphas absorbed) ----------
+/target/thickness 5.0 mm
+/run/reinitializeGeometry
+/target/printConfig
+/run/beamOn 500000

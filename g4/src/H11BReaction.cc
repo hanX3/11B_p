@@ -955,7 +955,7 @@ void H11BReaction::DefineCommands()
   messenger->DeclareMethod("162BWScaleFactor", &H11BReaction::Set162BWScaleFactorCommand,
                            "Scale the 162-keV BW allocation component (>= 0)");
   messenger->DeclareMethod("675ScaleFactor", &H11BReaction::Set675ScaleFactorCommand,
-                           "Scale the fit675 component (>= 0)");
+                           "Scale the 675-region (Wang-2026 S-factor) component (>= 0)");
 
   messenger->DeclareMethod("crossSectionBiasFactor", &H11BReaction::SetCrossSectionBiasFactorCommand, "Set p + 11B cross-section sampling bias factor (>= 1)");
 

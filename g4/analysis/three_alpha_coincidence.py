@@ -1,92 +1,137 @@
 #!/usr/bin/env python3
-"""Three-alpha Si-segment coincidence analysis.
-
-Quantifies, for the strip-segmented Si array, how often the three alpha
-particles of an 11B(p,3alpha) event are recorded on three *distinct* Si
-segments (a triple coincidence) -- the observable that the DSSD upgrade
-enables and that downstream Dalitz / angular-correlation studies rely on.
+"""Three-alpha DSSD strip-readout multiplicity analysis.
 
 Usage:
     python3 analysis/three_alpha_coincidence.py 'data/event_<stamp>_t*.root'
 
-The argument is a glob for the per-thread event ROOT files of a single run.
-Each Si hit row is one fired (module, segment); an alpha hit is identified by
-pdg == 1000020040.  A segment is counted once per event even if several alphas
-share it.  Reported quantities:
+The event tree stores the two DSSD faces as independent electronic signals:
 
-  * events with >=1 / >=2 / >=3 distinct alpha Si segments
-  * the triple-coincidence fraction (>=3 distinct segments) -- the baseline
-  * per-ring hit accounting (1=barrel, 2=backward annular, 3=forward annular)
+  readout_side = 0: front side
+    W1 -> local-x / azimuthal strip
+    S3 -> angular-sector strip
+
+  readout_side = 1: back side
+    W1 -> local-y / polar strip
+    S3 -> radial-ring strip
+
+A physical deposit contributes the same charge magnitude to one front strip and
+one back strip.  Deposits sharing a strip are summed before output.  Therefore
+this script reports strip multiplicities; it does not assume a unique front/back
+pixel pairing.  The condition >=3 front and >=3 back alpha strips is a necessary
+readout-multiplicity condition for resolving three alpha hits, not a complete
+pixel-reconstruction efficiency.
 """
-import sys
 import glob
+import sys
 
 import numpy as np
 import uproot
 
 ALPHA_PDG = 1000020040
-RING_NAMES = {1: "barrel", 2: "backward_annular", 3: "forward_annular"}
+FRONT = 0
+BACK = 1
+SUBARRAY_NAMES = {
+    1: "drum",
+    2: "backward_s3",
+    3: "forward_s3",
+    4: "forward_cap",
+    5: "backward_cap",
+}
 
 
 def load(pattern):
     files = sorted(glob.glob(pattern))
     if not files:
         raise SystemExit(f"no files match: {pattern}")
-    branches = ["event", "detector_type", "ring_id", "copy_no", "pdg"]
-    cols = {b: [] for b in branches}
-    for fn in files:
-        arr = uproot.open(fn)["tr"].arrays(branches, library="np")
-        for b in branches:
-            cols[b].append(arr[b])
-    for b in branches:
-        cols[b] = np.concatenate(cols[b])
+
+    branches = [
+        "event",
+        "detector_type",
+        "subarray_id",
+        "module_id",
+        "readout_side",
+        "strip_id",
+        "pdg",
+    ]
+    cols = {branch: [] for branch in branches}
+    for filename in files:
+        arrays = uproot.open(filename)["tr"].arrays(branches, library="np")
+        for branch in branches:
+            cols[branch].append(arrays[branch])
+
+    for branch in branches:
+        cols[branch] = np.concatenate(cols[branch]) if cols[branch] else np.array([])
     return files, cols
+
+
+def per_event_unique_strip_count(data, mask):
+    """Count unique (subarray,module,strip) channels for each selected event."""
+    if not mask.any():
+        return {}
+
+    rows = np.rec.fromarrays(
+        [
+            data["event"][mask].astype(np.int64),
+            data["subarray_id"][mask].astype(np.int32),
+            data["module_id"][mask].astype(np.int32),
+            data["strip_id"][mask].astype(np.int32),
+        ],
+        names="event,subarray,module,strip",
+    )
+    unique_rows = np.unique(rows)
+    events, counts = np.unique(unique_rows.event, return_counts=True)
+    return dict(zip(events.tolist(), counts.tolist()))
+
+
+def count_at_least(counts, threshold):
+    return sum(value >= threshold for value in counts.values())
 
 
 def main():
     pattern = sys.argv[1] if len(sys.argv) > 1 else "data/event_*_t*.root"
-    files, d = load(pattern)
+    files, data = load(pattern)
 
-    si = d["detector_type"] == 1
-    alpha = si & (d["pdg"] == ALPHA_PDG)
+    si = data["detector_type"] == 1
+    alpha = si & (data["pdg"] == ALPHA_PDG)
+    front_alpha = alpha & (data["readout_side"] == FRONT)
+    back_alpha = alpha & (data["readout_side"] == BACK)
 
-    n_events = int(len(np.unique(d["event"]))) if d["event"].size else 0
-    n_events_with_si_alpha = int(len(np.unique(d["event"][alpha]))) if alpha.any() else 0
+    front_counts = per_event_unique_strip_count(data, front_alpha)
+    back_counts = per_event_unique_strip_count(data, back_alpha)
 
-    # distinct alpha Si segments per event: unique copy_no per event
-    ev = d["event"][alpha]
-    cn = d["copy_no"][alpha].astype(np.int64)
-    pair = ev.astype(np.int64) * (10 ** 12) + cn  # unique (event, copy_no) key
-    uniq_pairs = np.unique(pair)
-    ev_of_pair = uniq_pairs // (10 ** 12)
-    seg_counts = np.bincount(np.unique(ev_of_pair, return_inverse=True)[1]) if ev_of_pair.size else np.array([])
+    event_ids = set(front_counts) | set(back_counts)
+    n_ge1_both = sum(front_counts.get(event, 0) >= 1 and back_counts.get(event, 0) >= 1 for event in event_ids)
+    n_ge2_both = sum(front_counts.get(event, 0) >= 2 and back_counts.get(event, 0) >= 2 for event in event_ids)
+    n_ge3_both = sum(front_counts.get(event, 0) >= 3 and back_counts.get(event, 0) >= 3 for event in event_ids)
 
-    n_ge1 = int((seg_counts >= 1).sum())
-    n_ge2 = int((seg_counts >= 2).sum())
-    n_ge3 = int((seg_counts >= 3).sum())
+    # This remains the number of events represented in the hit tree, not the
+    # total generated-event denominator.  Use the reaction tree for an absolute
+    # efficiency denominator.
+    n_saved_events = int(len(np.unique(data["event"]))) if data["event"].size else 0
 
-    def frac(n):
-        return n / n_events if n_events else 0.0
+    def fraction(value):
+        return value / n_saved_events if n_saved_events else 0.0
 
-    print("=" * 64)
-    print("Three-alpha Si-segment coincidence")
-    print("=" * 64)
-    print(f"input files            : {len(files)}")
-    print(f"primary events         : {n_events}")
-    print(f"total Si hit rows       : {int(si.sum())}")
-    print(f"alpha Si hit rows       : {int(alpha.sum())}")
-    print(f"events w/ >=1 alpha seg : {n_ge1}  ({frac(n_ge1):.4f})")
-    print(f"events w/ >=2 alpha seg : {n_ge2}  ({frac(n_ge2):.4f})")
-    print(f"events w/ >=3 alpha seg : {n_ge3}  ({frac(n_ge3):.4f})   <-- triple-coincidence baseline")
-    print("-" * 64)
-    print("per-ring alpha hit rows:")
-    for ring, name in RING_NAMES.items():
-        m = alpha & (d["ring_id"] == ring)
-        print(f"  ring {ring} ({name:17s}): {int(m.sum())}")
-    print("=" * 64)
+    print("=" * 72)
+    print("Three-alpha DSSD independent-strip readout")
+    print("=" * 72)
+    print(f"input files                         : {len(files)}")
+    print(f"events represented in hit tree      : {n_saved_events}")
+    print(f"Si alpha front-strip rows            : {int(front_alpha.sum())}")
+    print(f"Si alpha back-strip rows             : {int(back_alpha.sum())}")
+    print(f"events with >=1 strip on both sides  : {n_ge1_both}  ({fraction(n_ge1_both):.4f})")
+    print(f"events with >=2 strips on both sides : {n_ge2_both}  ({fraction(n_ge2_both):.4f})")
+    print(f"events with >=3 strips on both sides : {n_ge3_both}  ({fraction(n_ge3_both):.4f})")
+    print("-" * 72)
+    print("alpha strip rows by subarray and side:")
+    for subarray_id, name in SUBARRAY_NAMES.items():
+        front_rows = int((front_alpha & (data["subarray_id"] == subarray_id)).sum())
+        back_rows = int((back_alpha & (data["subarray_id"] == subarray_id)).sum())
+        print(f"  {subarray_id} ({name:13s})  front={front_rows:8d}  back={back_rows:8d}")
+    print("=" * 72)
     print(
-        f"BASELINE triple-alpha Si-segment coincidence fraction = {frac(n_ge3):.4f} "
-        f"({n_ge3}/{n_events})"
+        ">=3 strips on both sides is a readout multiplicity condition. "
+        "Front/back pairing and ghost-pixel rejection require a separate reconstruction step."
     )
 
 

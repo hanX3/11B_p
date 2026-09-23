@@ -66,9 +66,12 @@ H11BCrossSectionComponents H11BCrossSection::CalculateComponents(G4double kineti
   H11BCrossSectionComponents components;
   components.sigma_162_model = GetSigma162(energy_cm_keV) * cm2;
 
-  // Phenomenological weighted_chebE16 fit675 component from cs_model.  This is
-  // not an isolated 675-keV Breit-Wigner resonance.
-  components.sigma_675_model = GetFit675CrossSection(kinetic_energy_lab);
+  // 675-region component: Wang-2026 S-factor parameterization (segments
+  // S2/S3 plus the S1 quadratic background; the 148-keV Lorentzian of S1 is
+  // omitted because the 16.11 MeV resonance is handled by the
+  // penetrability-corrected Breit-Wigner GetSigma162).  This is not an
+  // isolated 675-keV Breit-Wigner resonance.
+  components.sigma_675_model = GetWang675CrossSection(kinetic_energy_lab);
 
   components.sigma_162_total = std::max(0.0, g_162_bw_scale_factor) * components.sigma_162_model;
   components.sigma_675_total = std::max(0.0, g_675_scale_factor) * components.sigma_675_model;
@@ -294,50 +297,56 @@ G4double H11BCrossSection::Get675GammaTotalCrossSection(G4double sigma_675_effec
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-G4double H11BCrossSection::GetFit675CrossSection(G4double kinetic_energy_lab)
+G4double H11BCrossSection::GetWang675CrossSection(G4double kinetic_energy_lab)
 {
+  // Piecewise analytic S-factor parameterization of the p+11B total cross
+  // section from Wang et al. 2026 (arXiv:2601.00241), fitted to Becker 1987 +
+  // Mazzucconi 2025 (EPJ A 61, 114) data:
+  //
+  //   sigma(E) = S(E)/E * exp(-sqrt(EG/E)),  EG = 22.589 MeV,  E = c.m. energy.
+  //
+  // The 148-keV Lorentzian term of their low-energy segment is INTENTIONALLY
+  // OMITTED here: the narrow 16.11 MeV resonance is described by the
+  // penetrability-corrected single-level Breit-Wigner (GetSigma162) instead,
+  // so this function returns only the smooth 675-region / background part.
+  // The Gamow factor gives the physical low-energy suppression, so no
+  // low-energy clamp is required (unlike the legacy Chebyshev fit).
+  // Parameterization is valid up to 10 MeV c.m. per the reference.
+
   if (kinetic_energy_lab <= 0.) return 0.;
 
-  constexpr G4double fit_min_lab_MeV = 0.020;
-  constexpr G4double fit_max_lab_MeV = 1.000;
-  constexpr G4double coefficients[] = {
-    -4.240991093218323,
-    6.5335030639422,
-    -5.348623593275032,
-    2.836731408213122,
-    -1.88972601027126,
-    1.556619927270825,
-    -0.9501800114612392,
-    0.6222767937946161,
-    -0.4865823078410484,
-    0.3336851443104574,
-    -0.2357424108239984,
-    0.1936547242371347,
-    -0.1385260429805155,
-    0.1008831241333581,
-    -0.05830063682899136,
-    0.02350578311364693,
-    0.009138850080015581,
-  };
+  const G4double e_cm_MeV = GetEcmValue(1., 11., kinetic_energy_lab / keV) / 1000.0;
+  if (e_cm_MeV <= 0.) return 0.;
 
-  // Analytic weighted_chebE16 fit675 from cs_model.  The fit is calibrated on
-  // 0.020-1.000 MeV proton lab energy; clamp outside that range to avoid
-  // uncontrolled Chebyshev extrapolation in higher-energy runs.
-  const G4double e_lab_MeV = std::clamp(kinetic_energy_lab / MeV, fit_min_lab_MeV, fit_max_lab_MeV);
-  const G4double z = 2.0 * (e_lab_MeV - fit_min_lab_MeV) / (fit_max_lab_MeV - fit_min_lab_MeV) - 1.0;
+  constexpr G4double eg_MeV = 22.589;
+  const G4double x_keV = 1000.0 * e_cm_MeV;
 
-  G4double log_sigma_b = coefficients[0];
-  G4double t_nm2 = 1.0;
-  G4double t_nm1 = z;
-  log_sigma_b += coefficients[1] * t_nm1;
-  for (std::size_t i = 2; i < sizeof(coefficients) / sizeof(coefficients[0]); ++i) {
-    const G4double t_n = 2.0 * z * t_nm1 - t_nm2;
-    log_sigma_b += coefficients[i] * t_n;
-    t_nm2 = t_nm1;
-    t_nm1 = t_n;
+  G4double s_MeV_b = 0.0;
+  if (e_cm_MeV <= 0.400) {
+    // Segment 1 quadratic background (148-keV Lorentzian omitted, see above).
+    s_MeV_b = 197.0 + 0.240 * x_keV + 2.31e-4 * x_keV * x_keV;
+  } else if (e_cm_MeV <= 0.700) {
+    // Segment 2: 675-region polynomial.
+    const G4double x = (x_keV - 400.0) / 100.0;
+    s_MeV_b = 330.2 + 102.436 * x - 58.481 * x * x + 0.0933 * x * x * x * x * x;
+  } else {
+    // Segment 3: constant + five Lorentzian terms (centers/widths in keV).
+    constexpr G4double base = 0.209689;
+    constexpr G4double amp[5]    = {2.0235e6, 4.0102e6, 1.3220e6, 4.9451e6, 4.3430e5};
+    constexpr G4double center[5] = {622.2, 1388.4, 2492.4, 3528.6, 4703.6};
+    constexpr G4double width[5]  = {99.6, 449.9, 238.6, 398.5, 152.5};
+    s_MeV_b = base;
+    for (int k = 0; k < 5; ++k) {
+      const G4double d = x_keV - center[k];
+      s_MeV_b += amp[k] / (d * d + width[k] * width[k]);
+    }
   }
 
-  return std::exp(log_sigma_b) * barn;
+  const G4double gamow_arg = std::sqrt(eg_MeV / e_cm_MeV);
+  if (gamow_arg > 700.0) return 0.;  // exp underflow guard
+
+  const G4double sigma_b = s_MeV_b / e_cm_MeV * std::exp(-gamow_arg);
+  return std::max(0.0, sigma_b) * barn;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

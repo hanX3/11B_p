@@ -13,6 +13,7 @@
 #include "G4SubtractionSolid.hh"
 #include "G4LogicalVolume.hh"
 #include "G4PVPlacement.hh"
+#include "G4VPhysicalVolume.hh"
 #include "G4Region.hh"
 #include "G4RotationMatrix.hh"
 #include "G4ThreeVector.hh"

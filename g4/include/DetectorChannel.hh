@@ -23,7 +23,9 @@ struct DetectorChannel
   G4int copy_no = -1;
 };
 
-// Decimal copy-number layout (widened to support strip-segmented DSSDs).
+// Decimal physical-volume copy-number layout.  Silicon DSSD strip channels are
+// now stored in independent front/back hit collections and are not encoded as
+// virtual-pixel segment ids in the Si physical-volume copy number.
 //
 //   copy_no = type*1e8 + array*1e7 + ring*1e5 + module*1e3 + segment
 //
@@ -31,9 +33,9 @@ struct DetectorChannel
 //   ------   --------------   -----   ---------   -------------------------
 //   type     [1e8]            1       9           1..5 (DetectorType)
 //   array    [1e7]            1       9           0
-//   ring     [1e5, 1e6]       2       99          1..3
-//   module   [1e3, 1e4]       2       99          0..7 (barrel sectors)
-//   segment  [1e0..1e2]       3       999         0..255 (16x16 DSSD)
+//   ring     [1e5, 1e6]       2       99          1..5 for current Si subarrays
+//   module   [1e3, 1e4]       2       99          detector-module index
+//   segment  [1e0..1e2]       3       999         detector-specific; Si volumes use 0
 //
 // The largest encoded value is type=5 -> 5e8 = 500,000,000, well below the
 // 2,147,483,647 G4int (32-bit signed) ceiling.  Because type still occupies

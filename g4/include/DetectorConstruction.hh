@@ -19,9 +19,12 @@
 #include "G4VPhysicalVolume.hh"
 #include "G4PhysicalConstants.hh"
 
+#include <memory>
+
 class G4LogicalVolume;
 class G4Material;
 class G4UserLimits;
+class G4GenericMessenger;
 
 class DetectorConstruction : public G4VUserDetectorConstruction
 {
@@ -50,6 +53,7 @@ public:
   {
     target_thickness = th;
   }
+  G4double GetTargetThickness() const { return target_thickness; }
   void SetTargetMaterial(G4String str);
 
   void SetTargetBackingFlag(G4bool bl)
@@ -57,10 +61,21 @@ public:
     flag_target_backing = bl;
   }
 
+  // ---- /target/ messenger command wrappers ----
+  // thickness is geometry: set it BEFORE /run/initialize, or set it and issue
+  // /run/reinitializeGeometry.  material and backing likewise affect the build.
+  void SetTargetThicknessCmd(G4double th);
+  void SetTargetMaterialCmd(G4String str);
+  void SetTargetBackingFlagCmd(G4bool bl);
+  void PrintTargetConfigCommand();
+
 private:
   // methods
   void DefineMaterials();
+  void DefineCommands();
   G4VPhysicalVolume* DefineVolumes();
+
+  std::unique_ptr<G4GenericMessenger> target_messenger;
 
 private:
   SiArray* si_array;

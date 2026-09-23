@@ -1,161 +1,88 @@
 #ifndef SiHit_H
 #define SiHit_H 1
 
-#include "G4VHit.hh"
-#include "G4THitsCollection.hh"
 #include "G4Allocator.hh"
-#include "G4ThreeVector.hh"
+#include "G4THitsCollection.hh"
 #include "G4UnitsTable.hh"
-#include "G4VVisManager.hh"
-#include "G4Circle.hh"
-#include "G4Colour.hh"
-#include "G4VisAttributes.hh"
+#include "G4VHit.hh"
 
 #include <iomanip>
 #include "tls.hh"
+
+// Logical DSSD readout sides.  The mapping used by SiSD is:
+//   Front: W1 local-x / azimuthal strip; S3 angular-sector strip.
+//   Back : W1 local-y / polar strip;     S3 radial-ring strip.
+enum class SiReadoutSide : G4int
+{
+  Front = 0,
+  Back = 1
+};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 class SiHit : public G4VHit
 {
 public:
   SiHit() = default;
-  SiHit(G4int rid, G4int sid);
   SiHit(const SiHit&) = default;
   ~SiHit() override = default;
 
-  // operators
   SiHit& operator=(const SiHit&) = default;
   G4bool operator==(const SiHit&) const;
 
   inline void* operator new(size_t);
   inline void operator delete(void*);
 
-  // methods from base class
   void Draw() override;
   void Print() override;
 
-  void SetRingId(G4int rid)
+  void SetDetectorId(G4int id)
   {
-    ring_id = rid;
+    detector_id = id;
   }
-  void SetSectorId(G4int sid)
+  void SetReadoutSide(G4int side)
   {
-    sector_id = sid;
+    readout_side = side;
   }
-  void SetDetectorType(G4int type)
+  void SetStripId(G4int id)
   {
-    detector_type = type;
-  }
-  void SetArrayId(G4int id)
-  {
-    array_id = id;
-  }
-  void SetModuleId(G4int id)
-  {
-    module_id = id;
-  }
-  void SetSegmentId(G4int id)
-  {
-    segment_id = id;
-  }
-  void SetCopyNo(G4int copy)
-  {
-    copy_no = copy;
+    strip_id = id;
   }
   void SetTime(G4double time)
   {
     time_ns = time;
   }
-  void SetParticleInfo(G4int pdg_code, G4int track, G4int parent)
-  {
-    pdg = pdg_code;
-    track_id = track;
-    parent_id = parent;
-  }
-  void SetEdep(G4double de)
-  {
-    e_dep = de;
-  }
   void AddEdep(G4double de)
   {
     e_dep += de;
   }
-  void SetPos(G4ThreeVector xyz)
-  {
-    pos = xyz;
-  }
 
-  G4int GetRingId() const
+  G4int GetDetectorId() const
   {
-    return ring_id;
+    return detector_id;
   }
-  G4int GetSectorId() const
+  G4int GetReadoutSide() const
   {
-    return sector_id;
+    return readout_side;
   }
-  G4int GetDetectorType() const
+  G4int GetStripId() const
   {
-    return detector_type;
-  }
-  G4int GetArrayId() const
-  {
-    return array_id;
-  }
-  G4int GetModuleId() const
-  {
-    return module_id;
-  }
-  G4int GetSegmentId() const
-  {
-    return segment_id;
-  }
-  G4int GetCopyNo() const
-  {
-    return copy_no;
+    return strip_id;
   }
   G4double GetTime() const
   {
     return time_ns;
   }
-  G4int GetPDG() const
-  {
-    return pdg;
-  }
-  G4int GetTrackId() const
-  {
-    return track_id;
-  }
-  G4int GetParentId() const
-  {
-    return parent_id;
-  }
   G4double GetEdep() const
   {
     return e_dep;
   }
-  G4ThreeVector GetPos() const
-  {
-    return pos;
-  }
-  const char* GetDetectorName() const
-  {
-    return "Si";
-  }
 
 private:
-  G4int ring_id = -1;   // 1,2
-  G4int sector_id = -1; //
-  G4int detector_type = 0;
-  G4int array_id = 0;
-  G4int module_id = -1;
-  G4int segment_id = 0;
-  G4int copy_no = -1;
-  G4int pdg = 0;
-  G4int track_id = -1;
-  G4int parent_id = -1;
+  G4int detector_id = -1;
+  G4int readout_side = -1;
+  G4int strip_id = -1;
   G4double time_ns = 0.;
   G4double e_dep = 0.;
-  G4ThreeVector pos;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

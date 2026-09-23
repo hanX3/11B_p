@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Direct 3-alpha (democratic phase space) figure set -- 162 or 675 run.
+"""675-keV direct 3-alpha (democratic phase space) figure set.
 
-Reads the output of validation_162_direct3alpha.mac or
-validation_675_direct3alpha.mac and produces four
+Reads the output of validation_675_direct3alpha.mac and produces four
 single 4:3 panels (2-row x 3-column grid on a 16:8 slide):
 
   <stem>_spectrum.png : pooled single-alpha LAB energy spectrum
@@ -21,8 +20,8 @@ single 4:3 panels (2-row x 3-column grid on a 16:8 slide):
 Selection: branch_id == -1 (direct decay).
 
 Usage:
-    python3 plot_direct3alpha.py FILE.root
-    python3 plot_direct3alpha.py FILE.root --stem d162 --nbins 160
+    python3 plot_675_direct.py FILE.root
+    python3 plot_675_direct.py FILE.root --stem d675 --nbins 160
 """
 
 import argparse
@@ -79,7 +78,7 @@ def dalitz_xy_symmetrized(E):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("rootfile")
-    ap.add_argument("--stem", default="direct3alpha")
+    ap.add_argument("--stem", default="direct675")
     ap.add_argument("--nbins", type=int, default=200,
                     help="Dalitz 2D bins per axis (default 200)")
     args = ap.parse_args()
@@ -91,7 +90,7 @@ def main():
     n = int(m.sum())
     if n == 0:
         sys.exit("no direct-decay events (branch_id == -1) found.\n"
-                 "  Did you run validation_162/675_direct3alpha.mac?")
+                 "  Did you run validation_675_direct3alpha.mac?")
 
     def col(k):
         v = np.asarray(a[k], dtype=float)[m]

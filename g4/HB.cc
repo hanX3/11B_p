@@ -119,8 +119,10 @@ int main(int argc, char** argv)
   run_manager->SetUserInitialization(detector);
   run_manager->SetUserInitialization(new PhysicsList());
   run_manager->SetUserInitialization(new ActionInitialization(random_seed));
-  run_manager->Initialize();
 
+  // Do not initialize the run manager here. Geometry commands in a batch macro
+  // must be applied before /run/initialize so DetectorConstruction sees the
+  // requested configuration. Interactive mode is initialized by init_vis.mac.
   auto vis_manager = new G4VisExecutive();
   vis_manager->Initialize();
 

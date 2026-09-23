@@ -58,6 +58,8 @@ private:
   EventData event_data;
   TFile* event_file = nullptr;
   TTree* event_tree = nullptr;
+  TTree* si_pixel_map_tree = nullptr;
+  SiPixelMapData si_pixel_map_data;
 
   // track
 private:

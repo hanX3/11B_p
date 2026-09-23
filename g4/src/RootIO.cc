@@ -1,5 +1,6 @@
 #include "RootIO.hh"
 #include "OutputPath.hh"
+#include "SiArray.hh"
 
 #include <iostream>
 #include <stdio.h>
@@ -302,31 +303,54 @@ void RootIO::OpenEventFile()
   }
   G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
 
-  event_tree = new TTree("tr", "event simulation data");
-  event_tree->Branch("event", &event_data.event, "event/L");
-  event_tree->Branch("detector_type", &event_data.detector_type, "detector_type/I");
-  event_tree->Branch("array_id", &event_data.array_id, "array_id/I");
-  event_tree->Branch("ring_id", &event_data.ring_id, "ring_id/I");
-  event_tree->Branch("module_id", &event_data.module_id, "module_id/I");
-  event_tree->Branch("segment_id", &event_data.segment_id, "segment_id/I");
-  event_tree->Branch("copy_no", &event_data.copy_no, "copy_no/I");
-  event_tree->Branch("ring", &event_data.ring, "ring/I");
-  event_tree->Branch("sector", &event_data.sector, "sector/I");
-  event_tree->Branch("e", &event_data.e, "e/D");
-  event_tree->Branch("time", &event_data.time, "time/D");
-  event_tree->Branch("x", &event_data.x, "x/D");
-  event_tree->Branch("y", &event_data.y, "y/D");
-  event_tree->Branch("z", &event_data.z, "z/D");
-  event_tree->Branch("pdg", &event_data.pdg, "pdg/I");
-  event_tree->Branch("track_id", &event_data.track_id, "track_id/I");
-  event_tree->Branch("parent_id", &event_data.parent_id, "parent_id/I");
-  event_tree->Branch("detector", event_data.detector, "detector/C");
+  event_tree = new TTree("event", "one entry per Geant4 event");
+  event_tree->Branch("event_id", &event_data.event_id, "event_id/L");
+
+  event_tree->Branch("si_detector_id", &event_data.si_detector_id);
+  event_tree->Branch("si_side", &event_data.si_side);
+  event_tree->Branch("si_strip_id", &event_data.si_strip_id);
+  event_tree->Branch("si_edep_MeV", &event_data.si_edep_MeV);
+  event_tree->Branch("si_time_ns", &event_data.si_time_ns);
+
+  event_tree->Branch("labr3_detector_id", &event_data.labr3_detector_id);
+  event_tree->Branch("labr3_edep_MeV", &event_data.labr3_edep_MeV);
+  event_tree->Branch("labr3_time_ns", &event_data.labr3_time_ns);
+
+  event_tree->Branch("hpge_detector_id", &event_data.hpge_detector_id);
+  event_tree->Branch("hpge_edep_MeV", &event_data.hpge_edep_MeV);
+  event_tree->Branch("hpge_time_ns", &event_data.hpge_time_ns);
 
   if (!event_tree) {
-    G4cout << "\n can't create tree" << G4endl;
+    G4cout << "\n can't create event tree" << G4endl;
     return;
   }
-  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
+
+  // Static geometry lookup used after front/back strip pairing.  Angles are
+  // calculated from the nominal target centre (0,0,TargetZPos); the saved xyz
+  // coordinates allow Python to recompute them for an event-specific vertex.
+  si_pixel_map_tree = new TTree("si_pixel_map", "DSSD ideal-pixel centre geometry");
+  si_pixel_map_tree->Branch("detector_id", &si_pixel_map_data.detector_id, "detector_id/I");
+  si_pixel_map_tree->Branch("detector_model", &si_pixel_map_data.detector_model, "detector_model/I");
+  si_pixel_map_tree->Branch("subarray_id", &si_pixel_map_data.subarray_id, "subarray_id/I");
+  si_pixel_map_tree->Branch("module_id", &si_pixel_map_data.module_id, "module_id/I");
+  si_pixel_map_tree->Branch("front_strip_id", &si_pixel_map_data.front_strip_id, "front_strip_id/I");
+  si_pixel_map_tree->Branch("back_strip_id", &si_pixel_map_data.back_strip_id, "back_strip_id/I");
+  si_pixel_map_tree->Branch("x_center_mm", &si_pixel_map_data.x_center_mm, "x_center_mm/D");
+  si_pixel_map_tree->Branch("y_center_mm", &si_pixel_map_data.y_center_mm, "y_center_mm/D");
+  si_pixel_map_tree->Branch("z_center_mm", &si_pixel_map_data.z_center_mm, "z_center_mm/D");
+  si_pixel_map_tree->Branch("theta_lab_center_deg", &si_pixel_map_data.theta_lab_center_deg,
+                            "theta_lab_center_deg/D");
+  si_pixel_map_tree->Branch("phi_lab_center_deg", &si_pixel_map_data.phi_lab_center_deg,
+                            "phi_lab_center_deg/D");
+
+  const auto pixel_map = SiArray::BuildPixelMap();
+  for (const auto& entry : pixel_map) {
+    si_pixel_map_data = entry;
+    si_pixel_map_tree->Fill();
+  }
+
+  G4cout << "----> event tree and " << pixel_map.size() << " Si pixel-map entries are ready in "
+         << output_path.string() << G4endl;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -345,8 +369,9 @@ void RootIO::CloseEventFile()
 
   event_file->cd();
   if (event_tree) event_tree->Write();
+  if (si_pixel_map_tree) si_pixel_map_tree->Write();
   event_file->Close();
-  G4cout << "\n----> event tree is saved.\n\n";
+  G4cout << "\n----> event tree and Si pixel map are saved.\n\n";
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

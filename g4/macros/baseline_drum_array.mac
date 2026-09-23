@@ -1,0 +1,75 @@
+# =====================================================================
+# baseline_drum_array.mac
+#
+# "Connected drum" all-commercial baseline (defaults built into SiArrayConfig):
+#   * Si_Drum: 12 x W1 (50x50 mm, 16x16 strips) dodecagonal prism,
+#     inscribed radius derived = 93.30 mm      -> theta ~ 75-105 deg
+#   * Si_Forward/BackwardCap: 12 x W1 each, hinged on the drum end edges,
+#     folded inward 45 deg, fish-scale 6+6     -> theta ~ 44-75 / 105-136
+#   * Si_Forward/BackwardAnnular: S3 (r 11-35 mm, 24 rings x 32 sectors)
+#     at +/-36 mm                              -> theta ~ 17-44 / 136-163
+#   Continuous coverage theta 17-163 deg, ~94-95% of 4pi, 36 x W1 + 2 x S3.
+#
+# This run fires an isotropic-emission physics sample for the theta-phi
+# acceptance map (CAKE-style solid-angle validation figure).
+#
+# NOTES:
+#   * Geometry parameters must be set BEFORE /run/initialize.
+#   * Cap plates are hit at oblique incidence by construction (folded
+#     geometry); quantify the effective-dead-layer penalty at the L4 stage.
+#   * The 5 mm target backing shadows the forward hemisphere up to
+#     theta ~ 76 deg -> switch it off for acceptance / 3-alpha studies.
+# =====================================================================
+
+# ---- geometry (before /run/initialize; values = defaults, kept explicit ----
+# ---- so this file doubles as documentation and as a scan template)      ----
+/si/drumModules 12
+/si/capFoldAngle 45 deg
+/si/capStagger 8 mm
+/si/enableDrum true
+/si/enableForwardCap true
+/si/enableBackwardCap true
+/si/forwardDistance 36 mm
+/si/backwardDistance 36 mm
+/si/enableForwardAnnular true
+
+# thin target, no backing: acceptance must not be polluted by absorption
+/target/thickness 0.12 um
+/target/backing false
+
+/run/initialize
+
+# ---- segmentation (hit-time, no rebuild needed) ----
+/si/barrelStripsZ 16
+/si/barrelStripsPhi 16
+/si/annularRings 24
+/si/annularSectors 32
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 675 keV
+
+# ---- output: reaction + event hits for the theta-phi acceptance map ----
+/output/saveReaction true
+/output/saveEvent true
+/output/saveTrack false
+/output/saveStep false
+
+# ---- clean sequential 3-alpha sample at 675 keV ----
+/h11b/crossSectionBiasFactor 1000000000
+/h11b/enableDirectDecay false
+/h11b/162SequentialDecayFraction 1.0
+/h11b/162BWScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+
+/si/printConfig
+/target/printConfig
+/h11b/printConfig
+/output/printConfig
+
+/run/beamOn 500000

@@ -4,6 +4,7 @@
 #include <globals.hh>
 #include <cstring>
 #include <limits>
+#include <vector>
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 struct H11BReactionData
@@ -276,37 +277,72 @@ struct H11BReactionData
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 struct EventData
 {
-  G4long event;
-  G4int detector_type;
-  G4int array_id;
-  G4int ring_id;
-  G4int module_id;
-  G4int segment_id;
-  G4int copy_no;
-  G4int ring;
-  G4int sector;
-  G4double e;
-  G4double time;
-  G4double x;
-  G4double y;
-  G4double z;
-  G4int pdg;
-  G4int track_id;
-  G4int parent_id;
-  char detector[128];
+  G4long event_id;
 
-  //
+  // Independent DSSD strip signals.  One vector element is one electronic
+  // channel after all energy deposits on that strip have been accumulated.
+  std::vector<G4int> si_detector_id;
+  std::vector<G4int> si_side;     // 0: front, 1: back
+  std::vector<G4int> si_strip_id;
+  std::vector<G4double> si_edep_MeV;
+  std::vector<G4double> si_time_ns;
+
+  // Unsegmented gamma-detector channel signals.
+  std::vector<G4int> labr3_detector_id;
+  std::vector<G4double> labr3_edep_MeV;
+  std::vector<G4double> labr3_time_ns;
+
+  std::vector<G4int> hpge_detector_id;
+  std::vector<G4double> hpge_edep_MeV;
+  std::vector<G4double> hpge_time_ns;
+
   EventData()
-      : event(0), detector_type(0), array_id(0), ring_id(0), module_id(0), segment_id(0), copy_no(-1), ring(0),
-        sector(0), e(0.), time(0.), x(0.), y(0.), z(0.), pdg(0), track_id(-1), parent_id(-1)
+      : event_id(-1)
   {
-    std::memset(detector, '\0', sizeof(detector));
   }
 
-  //
   void Clear()
   {
-    *this = EventData();
+    event_id = -1;
+
+    si_detector_id.clear();
+    si_side.clear();
+    si_strip_id.clear();
+    si_edep_MeV.clear();
+    si_time_ns.clear();
+
+    labr3_detector_id.clear();
+    labr3_edep_MeV.clear();
+    labr3_time_ns.clear();
+
+    hpge_detector_id.clear();
+    hpge_edep_MeV.clear();
+    hpge_time_ns.clear();
+  }
+};
+
+// Static DSSD pixel-centre geometry.  These entries contain detector geometry
+// only; they do not contain event or Monte-Carlo track truth.
+struct SiPixelMapData
+{
+  G4int detector_id;
+  G4int detector_model; // 1: W1, 2: S3
+  G4int subarray_id;
+  G4int module_id;
+  G4int front_strip_id;
+  G4int back_strip_id;
+
+  G4double x_center_mm;
+  G4double y_center_mm;
+  G4double z_center_mm;
+  G4double theta_lab_center_deg;
+  G4double phi_lab_center_deg;
+
+  SiPixelMapData()
+      : detector_id(-1), detector_model(0), subarray_id(-1), module_id(-1), front_strip_id(-1),
+        back_strip_id(-1), x_center_mm(0.), y_center_mm(0.), z_center_mm(0.), theta_lab_center_deg(0.),
+        phi_lab_center_deg(0.)
+  {
   }
 };
 

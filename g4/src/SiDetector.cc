@@ -111,34 +111,47 @@ void SiDetector::PlaceAlShell(const G4Transform3D& transfrom_3d)
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-// ring_id 3 is the forward annular DSSD added to recover forward-emitted alphas.
-std::map<G4String, G4int> SiDetector::map_name_to_ring_id = {{"Si_Barrel", 1}, {"Si_BackwardAnnular", 2}, {"Si_ForwardAnnular", 3}};
+// All-commercial "connected drum" baseline (W1 + S3 catalogue parts).
+//   ring_id 1: Si_Drum            - 12 W1 faces, dodecagonal prism, theta ~75-105
+//   ring_id 2: Si_BackwardAnnular - S3 annular DSSD at -36 mm, theta ~136-163
+//   ring_id 3: Si_ForwardAnnular  - S3 annular DSSD at +36 mm, theta ~17-44
+//   ring_id 4: Si_ForwardCap      - 12 W1 fish-scale plates hinged on the drum
+//                                   forward edge, folded inward, theta ~44-75
+//   ring_id 5: Si_BackwardCap     - mirror of ring 4, theta ~105-136
+// Even cap module ids form the inner fish-scale sub-ring (hinged on the drum
+// edge); odd ids form the outer sub-ring (capStagger further out, rotated half
+// a face period) covering the V-gaps.
+std::map<G4String, G4int> SiDetector::map_name_to_ring_id = {{"Si_Drum", 1}, {"Si_BackwardAnnular", 2}, {"Si_ForwardAnnular", 3}, {"Si_ForwardCap", 4}, {"Si_BackwardCap", 5}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::map<G4int, G4String> SiDetector::map_ring_id_to_name = {{1, "Si_Barrel"}, {2, "Si_BackwardAnnular"}, {3, "Si_ForwardAnnular"}};
+std::map<G4int, G4String> SiDetector::map_ring_id_to_name = {{1, "Si_Drum"}, {2, "Si_BackwardAnnular"}, {3, "Si_ForwardAnnular"}, {4, "Si_ForwardCap"}, {5, "Si_BackwardCap"}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::map<G4String, G4int> SiDetector::map_name_to_sectors = {{"Si_Barrel", 8}, {"Si_BackwardAnnular", 1}, {"Si_ForwardAnnular", 1}};
+// Drum/cap module counts are documented defaults; the value actually used at
+// build time is SiArrayConfig::GetDrumModules() so it can be scanned.
+std::map<G4String, G4int> SiDetector::map_name_to_sectors = {{"Si_Drum", 12}, {"Si_BackwardAnnular", 1}, {"Si_ForwardAnnular", 1}, {"Si_ForwardCap", 12}, {"Si_BackwardCap", 12}};
 
-// 0: diameter
-// 1: length
-std::map<G4String, std::array<G4double, 2>> SiDetector::map_si_par = {{"Si_BackwardAnnular", {120., 0.5}}, {"Si_ForwardAnnular", {120., 0.5}}};
+// 0: diameter (S3 active outer diameter 70 mm)
+// 1: thickness
+std::map<G4String, std::array<G4double, 2>> SiDetector::map_si_par = {{"Si_BackwardAnnular", {70., 0.5}}, {"Si_ForwardAnnular", {70., 0.5}}};
 
-// 0: width in phi direction
-// 1: length along beam axis
-// 2: radial thickness
-std::map<G4String, std::array<G4double, 3>> SiDetector::map_si_box_par = {{"Si_Barrel", {45., 120., 0.5}}};
+// W1-type quadratic DSSD: 50 x 50 mm active area, 0.5 mm thick.
+// 0: width  (azimuthal direction, local x)
+// 1: length (polar direction,   local y)
+// 2: thickness
+std::map<G4String, std::array<G4double, 3>> SiDetector::map_si_box_par = {{"Si_Drum", {50., 50., 0.5}}, {"Si_ForwardCap", {50., 50., 0.5}}, {"Si_BackwardCap", {50., 50., 0.5}}};
 
-std::map<G4String, G4double> SiDetector::map_si_inner_radius = {{"Si_BackwardAnnular", 8.}, {"Si_ForwardAnnular", 8.}};
+// S3 active inner radius 11 mm.
+std::map<G4String, G4double> SiDetector::map_si_inner_radius = {{"Si_BackwardAnnular", 11.}, {"Si_ForwardAnnular", 11.}};
 
 // 0: x
 // 1: y
 // 2: z
-// The annular z values below are documented defaults; the actual axial
-// placement of the two annular DSSDs is driven by SiArrayConfig
-// (forward/backward distance) inside SiArray::CalculatePlacement so the
-// distances can be scanned from a macro.
-std::map<G4String, std::array<G4double, 3>> SiDetector::map_placement_par = {{"Si_Barrel", {70., 0., TargetZPos / mm}}, {"Si_BackwardAnnular", {0., 0., TargetZPos / mm - 120.}}, {"Si_ForwardAnnular", {0., 0., TargetZPos / mm + 120.}}};
+// Documented defaults only.  The actual placement of every sub-array is
+// computed inside SiArray::CalculatePlacement from SiArrayConfig (drum
+// inscribed radius derived from the module count; cap fold angle / stagger;
+// annular distances), so everything can be scanned from a macro.
+std::map<G4String, std::array<G4double, 3>> SiDetector::map_placement_par = {{"Si_Drum", {93.3, 0., TargetZPos / mm}}, {"Si_BackwardAnnular", {0., 0., TargetZPos / mm - 36.}}, {"Si_ForwardAnnular", {0., 0., TargetZPos / mm + 36.}}, {"Si_ForwardCap", {93.3, 45., TargetZPos / mm + 25.}}, {"Si_BackwardCap", {93.3, 45., TargetZPos / mm - 25.}}};
 
 // 0: r1_inner
 // 1: r1_outer
@@ -146,10 +159,13 @@ std::map<G4String, std::array<G4double, 3>> SiDetector::map_placement_par = {{"S
 // 3: r2_outer
 // 4: h_r1
 // 5: h_r2
-std::map<G4String, std::array<G4double, 6>> SiDetector::map_al_par = {{"Si_BackwardAnnular", {61., 62., 8., 62., 0.5, 1.5}}};
+// Resized for the S3 active outer radius (35 mm): collar 36-37 mm plus a
+// backing plate down to r = 9 mm (physical hole slightly inside the 11 mm
+// active inner radius).
+std::map<G4String, std::array<G4double, 6>> SiDetector::map_al_par = {{"Si_BackwardAnnular", {36., 37., 9., 37., 0.5, 1.5}}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::map<G4String, std::array<G4double, 4>> SiDetector::map_color_par = {{"Si_Barrel", {0., 0., 1., 0.8}}, {"Si_BackwardAnnular", {0., 0.45, 1., 0.8}}, {"Si_ForwardAnnular", {0., 1., 0.45, 0.8}}};
+std::map<G4String, std::array<G4double, 4>> SiDetector::map_color_par = {{"Si_Drum", {0., 0., 1., 0.8}}, {"Si_ForwardCap", {0.3, 0., 1., 0.8}}, {"Si_BackwardCap", {0.5, 0., 1., 0.8}}, {"Si_BackwardAnnular", {0., 0.45, 1., 0.8}}, {"Si_ForwardAnnular", {0., 1., 0.45, 0.8}}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 std::map<G4String, std::array<G4double, 4>> SiDetector::map_color_al_shell_par = {{"Si_BackwardAnnular", {0.8, 0., 1., 0.3}}};
