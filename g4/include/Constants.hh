@@ -12,7 +12,7 @@
 // 0b0001 event data
 // 0b0010 track data
 // 0b0100 step data
-constexpr G4int MASK = 0b111;
+constexpr G4int MASK = 0b011;
 
 constexpr G4double WorldSizeX = 2. *m;
 constexpr G4double WorldSizeY = 2. *m;
@@ -134,7 +134,7 @@ constexpr G4bool H11BUseFullCoulombPenetrabilityFor8Be2Plus = true;
 // entrance-channel spin amplitudes / alignment.  Set them from data or a more
 // complete R-matrix/alignment calculation.  The default zeros preserve the old
 // isotropic primary-alpha distribution until physical coefficients are supplied.
-constexpr G4bool H11B165UsePrimaryAngularDistribution = true;
+constexpr G4bool H11B165UsePrimaryAngularDistribution = false;
 constexpr G4double H11B165Alpha0PrimaryA2 = 0.0;
 constexpr G4double H11B165Alpha0PrimaryA4 = 0.0;
 constexpr G4double H11B165Alpha1PrimaryA2 = 0.0;
@@ -142,8 +142,8 @@ constexpr G4double H11B165Alpha1PrimaryA4 = 0.0;
 
 // Exit-channel angular-correlation switches.
 // These affect only the 8Be(2+) sequential branch, i.e. alpha1 channel.
-constexpr G4bool H11B165UseExitAngularCorrelation = true;
-constexpr G4bool H11B675UseExitAngularCorrelation = true;
+constexpr G4bool H11B165UseExitAngularCorrelation = false;
+constexpr G4bool H11B675UseExitAngularCorrelation = false;
 
 // 165-keV resonance: 12C*(16.11, 2+) -> alpha + 8Be(2+).
 // The alpha1 branch is treated as d-wave dominated: L = 2.
@@ -155,7 +155,7 @@ constexpr G4int H11B675Alpha1ExitOrbitalL1 = 1;
 constexpr G4int H11B675Alpha1ExitOrbitalL3 = 3;
 constexpr G4double H11B675ExitL1Fraction = 0.76;
 constexpr G4double H11B675ExitL13Phase = 0.67 * 2.0 * 3.14159265358979323846;
-constexpr G4bool H11B675UseCoherentL13Interference = true;
+constexpr G4bool H11B675UseCoherentL13Interference = false;
 
 
 // The current H11BReaction final state still generates 3 alpha particles.

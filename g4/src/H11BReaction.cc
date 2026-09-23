@@ -276,11 +276,30 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile &projectile, G4Partic
   theParticleChange.AddSecondary(dynamic_product2);
   theParticleChange.AddSecondary(dynamic_product3);
 
+  // Build the three-alpha center-of-mass frame from the final-state alpha particles.
+  // This is the proper frame for the Dalitz plot.
+  G4LorentzVector lv_lab_3alpha =
+  lv_lab_alpha1 + lv_lab_alpha2 + lv_lab_alpha3;
+
+  G4ThreeVector beta_3alpha = lv_lab_3alpha.boostVector();
+
+  G4LorentzVector lv_3alpha_cm_alpha1 = lv_lab_alpha1;
+  G4LorentzVector lv_3alpha_cm_alpha2 = lv_lab_alpha2;
+  G4LorentzVector lv_3alpha_cm_alpha3 = lv_lab_alpha3;
+
+  lv_3alpha_cm_alpha1.boost(-beta_3alpha);
+  lv_3alpha_cm_alpha2.boost(-beta_3alpha);
+  lv_3alpha_cm_alpha3.boost(-beta_3alpha);
+
   // rootfile
   reaction_data.event = G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID();
   reaction_data.e_alpha1 = lv_lab_alpha1.e() - m_4He;
   reaction_data.e_alpha2 = lv_lab_alpha2.e() - m_4He;
   reaction_data.e_alpha3 = lv_lab_alpha3.e() - m_4He;
+  // three-alpha CM-frame kinetic energies
+  reaction_data.e_3alpha_cm_alpha1 = lv_3alpha_cm_alpha1.e() - m_4He;
+  reaction_data.e_3alpha_cm_alpha2 = lv_3alpha_cm_alpha2.e() - m_4He;
+  reaction_data.e_3alpha_cm_alpha3 = lv_3alpha_cm_alpha3.e() - m_4He;
   reaction_data.theta_lab_alpha1 = lv_lab_alpha1.theta();
   reaction_data.theta_lab_alpha2 = lv_lab_alpha2.theta();
   reaction_data.theta_lab_alpha3 = lv_lab_alpha3.theta();

@@ -85,6 +85,9 @@ void RootIO::OpenReactionFile()
     reaction_tree->Branch("theta_lab_alpha1", &reaction_data.theta_lab_alpha1, "theta_lab_alpha1/D");
     reaction_tree->Branch("theta_lab_alpha2", &reaction_data.theta_lab_alpha2, "theta_lab_alpha2/D");
     reaction_tree->Branch("theta_lab_alpha3", &reaction_data.theta_lab_alpha3, "theta_lab_alpha3/D");
+    reaction_tree->Branch("e_3alpha_cm_alpha1", &reaction_data.e_3alpha_cm_alpha1, "e_3alpha_cm_alpha1/D");
+    reaction_tree->Branch("e_3alpha_cm_alpha2", &reaction_data.e_3alpha_cm_alpha2, "e_3alpha_cm_alpha2/D");
+    reaction_tree->Branch("e_3alpha_cm_alpha3", &reaction_data.e_3alpha_cm_alpha3, "e_3alpha_cm_alpha3/D");
     reaction_tree->Branch("ex_8Be", &reaction_data.ex_8Be, "ex_8Be/D");
     reaction_tree->Branch("e_8Be", &reaction_data.e_8Be, "e_8Be/D");
     reaction_tree->Branch("theta_lab_8Be", &reaction_data.theta_lab_8Be, "theta_lab_8Be/D");

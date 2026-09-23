@@ -17,6 +17,12 @@ struct H11BReactionData{
   G4double phi_lab_alpha2;
   G4double phi_lab_alpha3;
 
+  // three-alpha center-of-mass kinetic energies
+  // These are the quantities preferred for Dalitz plots.
+  G4double e_3alpha_cm_alpha1;
+  G4double e_3alpha_cm_alpha2;
+  G4double e_3alpha_cm_alpha3;
+
   G4double ex_8Be; // exciation energy of 8Be
   G4double e_8Be;
   G4double theta_lab_8Be;
@@ -42,6 +48,9 @@ struct H11BReactionData{
     phi_lab_alpha1(0),
     phi_lab_alpha2(0),
     phi_lab_alpha3(0),
+    e_3alpha_cm_alpha1(0),
+    e_3alpha_cm_alpha2(0),
+    e_3alpha_cm_alpha3(0),
     ex_8Be(0),
     e_8Be(0),
     theta_lab_8Be(0),

@@ -21,6 +21,9 @@
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
 
+#include <array>
+#include <map>
+
 class LaBr3Detector
 {
 public:

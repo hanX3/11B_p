@@ -38,6 +38,7 @@ add_executable(HB HB.cc ${sources} ${headers})
 target_link_libraries(HB ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
 
 set(HB_SCRIPTS
+  batch.sh
   macros/gui.mac
   macros/vis.mac
   macros/init_vis.mac
