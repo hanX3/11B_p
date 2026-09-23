@@ -2,7 +2,87 @@
 
 /control/verbose 2
 
+# ROOT output control
+# For generator-level validation, only reaction ROOT output is usually needed.
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+/output/printConfig
+
+
 #/tracking/verbose 1
 #/hits/verbose 2
+
+# H11B reaction model
+/h11b/evaluatedCrossSection tentori2023
+
+# Background is now phase-space only: direct instantaneous 3-alpha emission.
+# backgroundBiasFactor changes only the sampling fraction of phase-space background.
+#   1   : no background-specific bias
+#   > 1 : oversample phase-space background
+#   0-1 : undersample phase-space background
+# Event weights in the reaction tree correct the biased sampling.
+/h11b/backgroundMode phaseSpace
+/h11b/backgroundBiasFactor 1
+
+/h11b/crossSectionBiasFactor 1
+
+# 165-keV primary alpha angular distribution
+# false: isotropic diagnostic mode
+# true : use W(theta)=1+a1*P1(cos theta)+a2*P2(cos theta)
+/h11b/enable165PrimaryAngularDistribution false
+/h11b/165PrimaryAngularA1 0.0
+/h11b/165PrimaryAngularA2 0.0
+
+# 165-keV alpha1 secondary alpha angular correlation
+# Treado 1972, Tp = 0.163 MeV, ignoring theta_s'' = -12 deg shift:
+# W(chi)=1+A2*P2(cos chi)+A4*P4(cos chi)
+# false: secondary alpha isotropic
+# true : use W(chi)=1+A2*P2(cos chi)+A4*P4(cos chi)
+/h11b/enable165Alpha1SecondaryAngularCorrelation true
+/h11b/165Alpha1SecondaryA2 -0.489
+/h11b/165Alpha1SecondaryA4 0.647
+
+# 165-keV gamma0 angular distribution
+# false: gamma0 isotropic
+# true : use W(theta)=1+a1*P1(cos theta)+a2*P2(cos theta).
+# The default A1/A2 values below are equivalent to the previous Craig-1956
+# A=0.19, B=0.21 form after normalization.
+/h11b/enable165Gamma0AngularDistribution true
+/h11b/165Gamma0AngularA1 -0.17757009345794392
+/h11b/165Gamma0AngularA2 0.13084112149532712
+
+# 675-keV primary alpha angular distribution
+# false: primary alpha isotropic
+# true : use W(theta)=1+a1*P1(cos theta)+a2*P2(cos theta)
+/h11b/enable675PrimaryAngularDistribution false
+/h11b/675PrimaryAngularA1 0.0
+/h11b/675PrimaryAngularA2 0.0
+
+# 675-keV alpha1 secondary alpha angular correlation
+# Treado 1972, Tp = 0.675 MeV, ignoring theta_s'' = -19 deg shift:
+# W(chi)=1+A2*P2(cos chi)+A4*P4(cos chi)
+# false: secondary alpha isotropic
+# true : use W(chi)=1+A2*P2(cos chi)+A4*P4(cos chi)
+/h11b/enable675Alpha1SecondaryAngularCorrelation true
+/h11b/675Alpha1SecondaryA2 -1.064
+/h11b/675Alpha1SecondaryA4 0.180
+
+/h11b/enable165GammaCapture true
+/h11b/enable675GammaCapture true
+
+# 675-keV gamma angular distribution
+# false: 675-keV primary gamma isotropic
+# true : use W(theta)=1+a1*P1(cos theta)+a2*P2(cos theta)
+# Current default is isotropic; keep disabled unless explicit coefficients are available.
+/h11b/enable675GammaAngularDistribution false
+/h11b/675GammaAngularA1 0.0
+/h11b/675GammaAngularA2 0.0
+
+# 675-keV gamma branch selection is fixed internally to the relative line table.
+/h11b/gammaBiasFactor 1
+
+/h11b/printConfig
 
 /run/beamOn 2000000

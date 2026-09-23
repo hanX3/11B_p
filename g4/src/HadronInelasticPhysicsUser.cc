@@ -7,37 +7,23 @@
 #include "H11BReaction.hh"
 #include "H11BCrossSection.hh"
 
-//
-HadronInelasticPhysicsUser::HadronInelasticPhysicsUser(const G4String &name)
-: G4VPhysicsConstructor(name)
-{
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+HadronInelasticPhysicsUser::HadronInelasticPhysicsUser(const G4String& name)
+    : G4VPhysicsConstructor(name) {}
 
-}
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+HadronInelasticPhysicsUser::~HadronInelasticPhysicsUser() {}
 
-//
-HadronInelasticPhysicsUser::~HadronInelasticPhysicsUser()
-{
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void HadronInelasticPhysicsUser::ConstructParticle() {}
 
-}
-
-//
-void HadronInelasticPhysicsUser::ConstructParticle()
-{
-
-}
-
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void HadronInelasticPhysicsUser::ConstructProcess()
 {
-  G4ProcessManager *manager = G4Proton::Proton()->GetProcessManager();
+  G4ProcessManager* manager = G4Proton::Proton()->GetProcessManager();
 
-  G4HadronInelasticProcess *process165 = new G4HadronInelasticProcess("p_11B_165", G4Proton::Definition());
-  process165->RegisterMe(new H11BReaction(H11BReaction::Resonance165));
-  process165->AddDataSet(new H11BCrossSection(H11BCrossSection::Resonance165));
-  manager->AddDiscreteProcess(process165);
-
-  G4HadronInelasticProcess *process675 = new G4HadronInelasticProcess("p_11B_675", G4Proton::Definition());
-  process675->RegisterMe(new H11BReaction(H11BReaction::Resonance675));
-  process675->AddDataSet(new H11BCrossSection(H11BCrossSection::Resonance675));
-  manager->AddDiscreteProcess(process675);
+  auto process = new G4HadronInelasticProcess("p_11B", G4Proton::Definition());
+  process->RegisterMe(new H11BReaction());
+  process->AddDataSet(new H11BCrossSection());
+  manager->AddDiscreteProcess(process);
 }

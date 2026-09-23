@@ -1,5 +1,5 @@
-#ifndef HPGeArray_h
-#define HPGeArray_h 1
+#ifndef HPGeArray_H
+#define HPGeArray_H 1
 
 #include "G4Material.hh"
 #include "G4LogicalVolume.hh"
@@ -14,25 +14,25 @@
 class HPGeArray
 {
 public:
-  HPGeArray(G4LogicalVolume *log);
+  HPGeArray(G4LogicalVolume* log);
   ~HPGeArray();
 
 public:
   void Construct();
-  void MakeSensitive(HPGeSD *hpge_sd);
+  void MakeSensitive(HPGeSD* hpge_sd);
 
 public:
   void PrintDetectorDimensionInfo();
 
 public:
-  G4LogicalVolume *exp_hall_log;
+  G4LogicalVolume* exp_hall_log;
 
 private:
   G4Transform3D CalculatePlacement(G4String name, G4int sector_id);
 
 private:
-  G4Material *hpge_mat;
-  G4Material *al_mat;
+  G4Material* hpge_mat;
+  G4Material* al_mat;
 
 private:
   G4int hpge_numbers;

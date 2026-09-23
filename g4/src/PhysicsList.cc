@@ -11,7 +11,7 @@
 
 #include "ProtonStepLimiterPhysics.hh"
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 PhysicsList::PhysicsList()
 {
   SetVerboseLevel(1);
@@ -24,9 +24,5 @@ PhysicsList::PhysicsList()
   RegisterPhysics(new ProtonStepLimiterPhysics());
 }
 
-//
-void PhysicsList::SetCuts()
-{
-
-}
-
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void PhysicsList::SetCuts() {}

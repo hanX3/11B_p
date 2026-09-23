@@ -1,5 +1,5 @@
-#ifndef PrimaryGeneratorAction_h
-#define PrimaryGeneratorAction_h 1
+#ifndef PrimaryGeneratorAction_H
+#define PrimaryGeneratorAction_H 1
 
 #include "G4VUserPrimaryGeneratorAction.hh"
 #include "G4ParticleGun.hh"
@@ -13,17 +13,22 @@ public:
   PrimaryGeneratorAction();
   virtual ~PrimaryGeneratorAction();
 
-  virtual void GeneratePrimaries(G4Event* );
+  virtual void GeneratePrimaries(G4Event*);
 
-  G4ParticleGun* GetParticleGun() {return particle_gun;}
+  G4ParticleGun* GetParticleGun()
+  {
+    return particle_gun;
+  }
 
   // Set methods
   void SetRandomFlag(G4bool);
-  void SetBeamEnergy(G4double b) { particle_energy = b; }
+  void SetBeamEnergy(G4double b)
+  {
+    particle_gun->SetParticleEnergy(b);
+  }
 
 private:
-  G4double particle_energy;
-  G4ParticleGun *particle_gun; // G4 particle gun
+  G4ParticleGun* particle_gun; // G4 particle gun
 };
 
 #endif

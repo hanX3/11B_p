@@ -1,0 +1,47 @@
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+/output/printConfig
+
+/h11b/evaluatedCrossSection model
+/h11b/backgroundMode phaseSpace
+/h11b/crossSectionBiasFactor 1000000000
+/h11b/backgroundBiasFactor 1
+/h11b/gammaBiasFactor 1
+
+/h11b/enable165GammaCapture false
+/h11b/enable675GammaCapture false
+
+/h11b/enable165PrimaryAngularDistribution false
+/h11b/165PrimaryAngularA1 0.8
+/h11b/165PrimaryAngularA2 0.5
+
+/h11b/enable675PrimaryAngularDistribution false
+/h11b/675PrimaryAngularA1 0.8
+/h11b/675PrimaryAngularA2 0.5
+
+/h11b/enable165Alpha1SecondaryAngularCorrelation false
+/h11b/165Alpha1SecondaryA2 1.0
+/h11b/165Alpha1SecondaryA4 0.8
+
+/h11b/enable675Alpha1SecondaryAngularCorrelation false
+/h11b/675Alpha1SecondaryA2 1.0
+/h11b/675Alpha1SecondaryA4 0.8
+
+/h11b/enable165Gamma0AngularDistribution false
+/h11b/165Gamma0AngularA1 0.8
+/h11b/165Gamma0AngularA2 0.5
+
+/h11b/enable675GammaAngularDistribution false
+/h11b/675GammaAngularA1 0.8
+/h11b/675GammaAngularA2 0.5

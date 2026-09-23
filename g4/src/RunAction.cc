@@ -1,6 +1,7 @@
 #include "RunAction.hh"
 #include "RootIO.hh"
 #include "PrimaryGeneratorAction.hh"
+#include "OutputConfig.hh"
 
 #include "G4Run.hh"
 #include "G4RunManager.hh"
@@ -12,10 +13,9 @@
 #include <fstream>
 #include <string>
 
-//
-RunAction::RunAction(RootIO *r_io)
-: G4UserRunAction(),
-  root_io(r_io)
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+RunAction::RunAction(RootIO* r_io)
+    : G4UserRunAction(), root_io(r_io)
 {
   // set printing event number per each 100000 events
   G4RunManager::GetRunManager()->SetPrintProgress(100000);
@@ -23,39 +23,44 @@ RunAction::RunAction(RootIO *r_io)
   timer = new G4Timer();
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 RunAction::~RunAction()
 {
   delete timer;
-  timer = NULL;
+  timer = nullptr;
+
+  delete root_io;
+  root_io = nullptr;
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RunAction::BeginOfRunAction(const G4Run* run)
 {
-  //inform the runManager to save random number seed
+  // inform the runManager to save random number seed
   G4RunManager::GetRunManager()->SetRandomNumberStore(false);
 
-  root_io->OpenReactionFile();
-  G4cout << "open reaction root file " << G4endl;
-
-  if((MASK&0b001)==0b001){
-    root_io->OpenEventFile();
-    G4cout << "open event root file " << G4endl;
-  }
-  if((MASK&0b010)==0b010){
-    root_io->OpenTrackFile();
-    G4cout << "open track root file " << G4endl;
-  }
-  if((MASK&0b100)==0b100){
-    root_io->OpenStepFile();
-    G4cout << "open step root file " << G4endl;
+  if (root_io) {
+    if (OutputConfig::GetSaveReaction()) {
+      root_io->OpenReactionFile();
+      G4cout << "open reaction root file " << G4endl;
+    }
+    if (OutputConfig::GetSaveEvent()) {
+      root_io->OpenEventFile();
+      G4cout << "open event root file " << G4endl;
+    }
+    if (OutputConfig::GetSaveTrack()) {
+      root_io->OpenTrackFile();
+      G4cout << "open track root file " << G4endl;
+    }
+    if (OutputConfig::GetSaveStep()) {
+      root_io->OpenStepFile();
+      G4cout << "open step root file " << G4endl;
+    }
   }
 
   int run_id = run->GetRunID();
   timer->Start();
   G4cout << "======================   RunID = " << run_id << "  ======================" << G4endl;
-
   G4cout << "1 energy " << G4endl;
   G4cout << "2 track id " << G4endl;
   G4cout << "3 particle name " << G4endl;
@@ -68,19 +73,22 @@ void RunAction::BeginOfRunAction(const G4Run* run)
   G4cout << "10 delat energy " << G4endl;
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RunAction::EndOfRunAction(const G4Run* run)
 {
-  root_io->CloseReactionFile();
-
-  if((MASK&0b001)==0b001){
-    root_io->CloseEventFile();
-  }
-  if((MASK&0b010)==0b010){
-    root_io->CloseTrackFile();
-  }
-  if((MASK&0b100)==0b100){
-    root_io->CloseStepFile();
+  if (root_io) {
+    if (OutputConfig::GetSaveReaction()) {
+      root_io->CloseReactionFile();
+    }
+    if (OutputConfig::GetSaveEvent()) {
+      root_io->CloseEventFile();
+    }
+    if (OutputConfig::GetSaveTrack()) {
+      root_io->CloseTrackFile();
+    }
+    if (OutputConfig::GetSaveStep()) {
+      root_io->CloseStepFile();
+    }
   }
 
   // Print results
@@ -89,4 +97,3 @@ void RunAction::EndOfRunAction(const G4Run* run)
   timer->Stop();
   G4cout << " time:  " << *timer << G4endl;
 }
-

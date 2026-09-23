@@ -1,217 +1,340 @@
 #include "RootIO.hh"
+#include "OutputPath.hh"
 
 #include <iostream>
 #include <stdio.h>
 #include <time.h>
 #include <fstream>
 #include <sstream>
+#include <cstddef>
 #include "G4UnitsTable.hh"
 #include "G4ThreeVector.hh"
+#include "G4Threading.hh"
 
-//
+namespace {
+void FillThreadedFileTag(char* file_name, std::size_t file_name_size)
+{
+  time_t t = time(nullptr);
+  struct tm tt;
+  localtime_r(&t, &tt);
+
+  const G4int thread_id = G4Threading::G4GetThreadId();
+  if (thread_id >= 0) {
+    snprintf(file_name, file_name_size, "%d%02d%02d_%02dh%02dm%02ds_t%d", tt.tm_year + 1900, tt.tm_mon + 1, tt.tm_mday, tt.tm_hour, tt.tm_min, tt.tm_sec, thread_id);
+  } else {
+    snprintf(file_name, file_name_size, "%d%02d%02d_%02dh%02dm%02ds_master", tt.tm_year + 1900, tt.tm_mon + 1, tt.tm_mday, tt.tm_hour, tt.tm_min, tt.tm_sec);
+  }
+}
+} // namespace
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 RootIO::RootIO()
 {
-  // reaction
   reaction_data.Clear();
-
-  // event
   event_data.Clear();
-
-  // track
   track_data.Clear();
-
-  // step
   step_data.Clear();
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 RootIO::~RootIO()
 {
-  // reaction
-  if(reaction_file){
+  if (reaction_file) {
     delete reaction_file;
     reaction_file = nullptr;
   }
-
-  // event
-  if(event_file){
+  if (event_file) {
     delete event_file;
     event_file = nullptr;
   }
-
-  // track
-  if(track_file){
+  if (track_file) {
     delete track_file;
     track_file = nullptr;
   }
-
-  // step
-  if(step_file){
+  if (step_file) {
     delete step_file;
     step_file = nullptr;
   }
 }
 
-//
-void RootIO::OpenReactionFile()
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void RootIO::SetRandomSeed(ULong64_t seed)
 {
-  time_t t;
-  struct tm* tt;
-  t=time(0);
-  tt=localtime(&t);
-  sprintf(file_name, "%d%02d%02d_%02dh%02dm%02ds", tt->tm_year+1900, tt->tm_mon+1, tt->tm_mday, tt->tm_hour, tt->tm_min, tt->tm_sec);
-  G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
-
-  std::stringstream ss;
-  ss.str("");
-  ss << DATAPATH << "/reaction_" << file_name << ".root";
-
-  reaction_file = new TFile(ss.str().c_str(), "RECREATE");
-  //  check file_in
-  if(!reaction_file){
-    G4cout << " RootIO::" << " problem creating the ROOT TFile!!!" << G4endl;
-    return ;
-    }else{
-      G4cout << " RootIO::" << " successful creating the " << ss.str().c_str() << "  !!!" << G4endl; 
-    }
-
-    //  creat tree
-    reaction_tree = new TTree("tr", "reaction simulation data");
-
-    reaction_tree->Branch("event", &reaction_data.event, "event/L");
-    reaction_tree->Branch("e_alpha1", &reaction_data.e_alpha1, "e_alpha1/D");
-    reaction_tree->Branch("e_alpha2", &reaction_data.e_alpha2, "e_alpha2/D");
-    reaction_tree->Branch("e_alpha3", &reaction_data.e_alpha3, "e_alpha3/D");
-    reaction_tree->Branch("theta_lab_alpha1", &reaction_data.theta_lab_alpha1, "theta_lab_alpha1/D");
-    reaction_tree->Branch("theta_lab_alpha2", &reaction_data.theta_lab_alpha2, "theta_lab_alpha2/D");
-    reaction_tree->Branch("theta_lab_alpha3", &reaction_data.theta_lab_alpha3, "theta_lab_alpha3/D");
-    reaction_tree->Branch("e_3alpha_cm_alpha1", &reaction_data.e_3alpha_cm_alpha1, "e_3alpha_cm_alpha1/D");
-    reaction_tree->Branch("e_3alpha_cm_alpha2", &reaction_data.e_3alpha_cm_alpha2, "e_3alpha_cm_alpha2/D");
-    reaction_tree->Branch("e_3alpha_cm_alpha3", &reaction_data.e_3alpha_cm_alpha3, "e_3alpha_cm_alpha3/D");
-    reaction_tree->Branch("ex_8Be", &reaction_data.ex_8Be, "ex_8Be/D");
-    reaction_tree->Branch("e_8Be", &reaction_data.e_8Be, "e_8Be/D");
-    reaction_tree->Branch("theta_lab_8Be", &reaction_data.theta_lab_8Be, "theta_lab_8Be/D");
-    reaction_tree->Branch("phi_lab_8Be", &reaction_data.phi_lab_8Be, "phi_lab_8Be/D");
-    reaction_tree->Branch("x", &reaction_data.x, "x/D");
-    reaction_tree->Branch("y", &reaction_data.y, "y/D");
-    reaction_tree->Branch("z", &reaction_data.z, "z/D");
-    reaction_tree->Branch("reaction", reaction_data.reaction, "reaction/C");
-
-    if(!reaction_tree){
-      G4cout << "\n can't create tree" << G4endl;
-      return ;
-    }
-
-    G4cout << "\n----> Tree file is opened in " << ss.str() << G4endl;
+  random_seed = seed;
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void RootIO::OpenReactionFile()
+{
+  FillThreadedFileTag(file_name, sizeof(file_name));
+  G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
+
+  const auto output_path = HBOutputPath::MakeOutputFilePath("reaction", file_name);
+
+  reaction_file = new TFile(output_path.string().c_str(), "RECREATE");
+  if (!reaction_file) {
+    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
+    return;
+  }
+  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
+
+  run_info_tree = new TTree("RunInfo", "run information");
+  run_info_tree->Branch("random_seed", &random_seed, "random_seed/l");
+  run_info_tree->Fill();
+
+  reaction_tree = new TTree("tr", "reaction simulation data");
+  reaction_tree->Branch("event", &reaction_data.event, "event/L");
+  reaction_tree->Branch("e_alpha1", &reaction_data.e_alpha1, "e_alpha1/D");
+  reaction_tree->Branch("e_alpha2", &reaction_data.e_alpha2, "e_alpha2/D");
+  reaction_tree->Branch("e_alpha3", &reaction_data.e_alpha3, "e_alpha3/D");
+  reaction_tree->Branch("theta_lab_alpha1", &reaction_data.theta_lab_alpha1, "theta_lab_alpha1/D");
+  reaction_tree->Branch("theta_lab_alpha2", &reaction_data.theta_lab_alpha2, "theta_lab_alpha2/D");
+  reaction_tree->Branch("theta_lab_alpha3", &reaction_data.theta_lab_alpha3, "theta_lab_alpha3/D");
+  reaction_tree->Branch("phi_lab_alpha1", &reaction_data.phi_lab_alpha1, "phi_lab_alpha1/D");
+  reaction_tree->Branch("phi_lab_alpha2", &reaction_data.phi_lab_alpha2, "phi_lab_alpha2/D");
+  reaction_tree->Branch("phi_lab_alpha3", &reaction_data.phi_lab_alpha3, "phi_lab_alpha3/D");
+  reaction_tree->Branch("resonance_id", &reaction_data.resonance_id, "resonance_id/I");
+  reaction_tree->Branch("branch_id", &reaction_data.branch_id, "branch_id/I");
+  reaction_tree->Branch("reaction_channel", &reaction_data.reaction_channel, "reaction_channel/I");
+  reaction_tree->Branch("background_mode", &reaction_data.background_mode, "background_mode/I");
+  reaction_tree->Branch("gamma_resonance", &reaction_data.gamma_resonance, "gamma_resonance/I");
+  reaction_tree->Branch("gamma_branch", &reaction_data.gamma_branch, "gamma_branch/I");
+  reaction_tree->Branch("gamma_angular_mode", &reaction_data.gamma_angular_mode, "gamma_angular_mode/I");
+  reaction_tree->Branch("n_prompt_gammas", &reaction_data.n_prompt_gammas, "n_prompt_gammas/I");
+  reaction_tree->Branch("gamma1_energy", &reaction_data.gamma1_energy, "gamma1_energy/D");
+  reaction_tree->Branch("gamma2_energy", &reaction_data.gamma2_energy, "gamma2_energy/D");
+  reaction_tree->Branch("gamma1_theta_lab", &reaction_data.gamma1_theta_lab, "gamma1_theta_lab/D");
+  reaction_tree->Branch("gamma2_theta_lab", &reaction_data.gamma2_theta_lab, "gamma2_theta_lab/D");
+  reaction_tree->Branch("gamma1_phi_lab", &reaction_data.gamma1_phi_lab, "gamma1_phi_lab/D");
+  reaction_tree->Branch("gamma2_phi_lab", &reaction_data.gamma2_phi_lab, "gamma2_phi_lab/D");
+  reaction_tree->Branch("gamma1_theta_cm", &reaction_data.gamma1_theta_cm, "gamma1_theta_cm/D");
+  reaction_tree->Branch("gamma2_theta_cm", &reaction_data.gamma2_theta_cm, "gamma2_theta_cm/D");
+  reaction_tree->Branch("cos_theta_gamma_cm", &reaction_data.cos_theta_gamma_cm, "cos_theta_gamma_cm/D");
+  reaction_tree->Branch("gamma_event_weight", &reaction_data.gamma_event_weight, "gamma_event_weight/D");
+  reaction_tree->Branch("gamma_bias_factor", &reaction_data.gamma_bias_factor, "gamma_bias_factor/D");
+  reaction_tree->Branch("event_sampling_weight", &reaction_data.event_sampling_weight, "event_sampling_weight/D");
+  reaction_tree->Branch("gamma_final_state_energy_MeV", &reaction_data.gamma_final_state_energy_MeV, "gamma_final_state_energy_MeV/D");
+  reaction_tree->Branch("gamma_primary_energy_MeV", &reaction_data.gamma_primary_energy_MeV, "gamma_primary_energy_MeV/D");
+  reaction_tree->Branch("gamma_relative_intensity_used", &reaction_data.gamma_relative_intensity_used, "gamma_relative_intensity_used/D");
+  reaction_tree->Branch("gamma_branch_fraction_used", &reaction_data.gamma_branch_fraction_used, "gamma_branch_fraction_used/D");
+  reaction_tree->Branch("gamma_branch_is_upper_limit", &reaction_data.gamma_branch_is_upper_limit, "gamma_branch_is_upper_limit/I");
+  reaction_tree->Branch("gamma_branch_from_relative_table", &reaction_data.gamma_branch_from_relative_table, "gamma_branch_from_relative_table/I");
+  reaction_tree->Branch("gamma_cascade_generated", &reaction_data.gamma_cascade_generated, "gamma_cascade_generated/I");
+  reaction_tree->Branch("enable_675_gamma_angular_distribution", &reaction_data.enable_675_gamma_angular_distribution, "enable_675_gamma_angular_distribution/I");
+  reaction_tree->Branch("a1_675_gamma", &reaction_data.a1_675_gamma, "a1_675_gamma/D");
+  reaction_tree->Branch("a2_675_gamma", &reaction_data.a2_675_gamma, "a2_675_gamma/D");
+  reaction_tree->Branch("e_cm_p11B", &reaction_data.e_cm_p11B, "e_cm_p11B/D");
+  reaction_tree->Branch("projectile_kinetic_lab", &reaction_data.projectile_kinetic_lab, "projectile_kinetic_lab/D");
+  reaction_tree->Branch("projectile_px_lab", &reaction_data.projectile_px_lab, "projectile_px_lab/D");
+  reaction_tree->Branch("projectile_py_lab", &reaction_data.projectile_py_lab, "projectile_py_lab/D");
+  reaction_tree->Branch("projectile_pz_lab", &reaction_data.projectile_pz_lab, "projectile_pz_lab/D");
+  reaction_tree->Branch("projectile_p_lab", &reaction_data.projectile_p_lab, "projectile_p_lab/D");
+  reaction_tree->Branch("projectile_theta_lab", &reaction_data.projectile_theta_lab, "projectile_theta_lab/D");
+  reaction_tree->Branch("projectile_phi_lab", &reaction_data.projectile_phi_lab, "projectile_phi_lab/D");
+  reaction_tree->Branch("ex_max_8Be", &reaction_data.ex_max_8Be, "ex_max_8Be/D");
+  reaction_tree->Branch("eaa_8Be", &reaction_data.eaa_8Be, "eaa_8Be/D");
+  reaction_tree->Branch("e_alpha8Be", &reaction_data.e_alpha8Be, "e_alpha8Be/D");
+  reaction_tree->Branch("cos_theta_primary_cm", &reaction_data.cos_theta_primary_cm, "cos_theta_primary_cm/D");
+  reaction_tree->Branch("cos_chi_exit", &reaction_data.cos_chi_exit, "cos_chi_exit/D");
+  reaction_tree->Branch("phi_primary_cm", &reaction_data.phi_primary_cm, "phi_primary_cm/D");
+  reaction_tree->Branch("cos_chi_secondary_8be", &reaction_data.cos_chi_secondary_8be, "cos_chi_secondary_8be/D");
+  reaction_tree->Branch("cos_theta_secondary_correlation", &reaction_data.cos_theta_secondary_correlation, "cos_theta_secondary_correlation/D");
+  reaction_tree->Branch("primary_angular_mode", &reaction_data.primary_angular_mode, "primary_angular_mode/I");
+  reaction_tree->Branch("enable_165_primary_angular_distribution", &reaction_data.enable_165_primary_angular_distribution, "enable_165_primary_angular_distribution/I");
+  reaction_tree->Branch("a1_165_primary", &reaction_data.a1_165_primary, "a1_165_primary/D");
+  reaction_tree->Branch("a2_165_primary", &reaction_data.a2_165_primary, "a2_165_primary/D");
+  reaction_tree->Branch("enable_675_primary_angular_distribution", &reaction_data.enable_675_primary_angular_distribution, "enable_675_primary_angular_distribution/I");
+  reaction_tree->Branch("a1_675_primary", &reaction_data.a1_675_primary, "a1_675_primary/D");
+  reaction_tree->Branch("a2_675_primary", &reaction_data.a2_675_primary, "a2_675_primary/D");
+  reaction_tree->Branch("primary_a1_used", &reaction_data.primary_a1_used, "primary_a1_used/D");
+  reaction_tree->Branch("primary_a2_used", &reaction_data.primary_a2_used, "primary_a2_used/D");
+  reaction_tree->Branch("h11b675_decay_model", &reaction_data.h11b675_decay_model, "h11b675_decay_model/I");
+  reaction_tree->Branch("h11b675_decay_model_used", &reaction_data.h11b675_decay_model_used, "h11b675_decay_model_used/I");
+  reaction_tree->Branch("enable_675_alpha1_secondary_angular_correlation", &reaction_data.enable_675_alpha1_secondary_angular_correlation, "enable_675_alpha1_secondary_angular_correlation/I");
+  reaction_tree->Branch("secondary_angular_model", &reaction_data.secondary_angular_model, "secondary_angular_model/I");
+  reaction_tree->Branch("secondary_a2_used", &reaction_data.secondary_a2_used, "secondary_a2_used/D");
+  reaction_tree->Branch("secondary_a4_used", &reaction_data.secondary_a4_used, "secondary_a4_used/D");
+  reaction_tree->Branch("background_sequential_model", &reaction_data.background_sequential_model, "background_sequential_model/I");
+  reaction_tree->Branch("cos_chi_675_internal", &reaction_data.cos_chi_675_internal, "cos_chi_675_internal/D");
+  reaction_tree->Branch("phi_chi_675_internal", &reaction_data.phi_chi_675_internal, "phi_chi_675_internal/D");
+  reaction_tree->Branch("opening_angle_alpha12_cm", &reaction_data.opening_angle_alpha12_cm, "opening_angle_alpha12_cm/D");
+  reaction_tree->Branch("opening_angle_alpha13_cm", &reaction_data.opening_angle_alpha13_cm, "opening_angle_alpha13_cm/D");
+  reaction_tree->Branch("opening_angle_alpha23_cm", &reaction_data.opening_angle_alpha23_cm, "opening_angle_alpha23_cm/D");
+  reaction_tree->Branch("e_alpha1_cm", &reaction_data.e_alpha1_cm, "e_alpha1_cm/D");
+  reaction_tree->Branch("e_alpha2_cm", &reaction_data.e_alpha2_cm, "e_alpha2_cm/D");
+  reaction_tree->Branch("e_alpha3_cm", &reaction_data.e_alpha3_cm, "e_alpha3_cm/D");
+  reaction_tree->Branch("e_8be_excitation", &reaction_data.e_8be_excitation, "e_8be_excitation/D");
+  reaction_tree->Branch("event_weight", &reaction_data.event_weight, "event_weight/D");
+  reaction_tree->Branch("e_3alpha_cm_alpha1", &reaction_data.e_3alpha_cm_alpha1, "e_3alpha_cm_alpha1/D");
+  reaction_tree->Branch("e_3alpha_cm_alpha2", &reaction_data.e_3alpha_cm_alpha2, "e_3alpha_cm_alpha2/D");
+  reaction_tree->Branch("e_3alpha_cm_alpha3", &reaction_data.e_3alpha_cm_alpha3, "e_3alpha_cm_alpha3/D");
+  reaction_tree->Branch("ex_8Be", &reaction_data.ex_8Be, "ex_8Be/D");
+  reaction_tree->Branch("e_8Be", &reaction_data.e_8Be, "e_8Be/D");
+  reaction_tree->Branch("theta_lab_8Be", &reaction_data.theta_lab_8Be, "theta_lab_8Be/D");
+  reaction_tree->Branch("phi_lab_8Be", &reaction_data.phi_lab_8Be, "phi_lab_8Be/D");
+  reaction_tree->Branch("x", &reaction_data.x, "x/D");
+  reaction_tree->Branch("y", &reaction_data.y, "y/D");
+  reaction_tree->Branch("z", &reaction_data.z, "z/D");
+  reaction_tree->Branch("sigma_eval_b", &reaction_data.sigma_eval_b, "sigma_eval_b/D");
+  reaction_tree->Branch("sigma_165_model_b", &reaction_data.sigma_165_model_b, "sigma_165_model_b/D");
+  reaction_tree->Branch("sigma_675_model_b", &reaction_data.sigma_675_model_b, "sigma_675_model_b/D");
+  reaction_tree->Branch("sigma_165_used_b", &reaction_data.sigma_165_used_b, "sigma_165_used_b/D");
+  reaction_tree->Branch("sigma_675_used_b", &reaction_data.sigma_675_used_b, "sigma_675_used_b/D");
+  reaction_tree->Branch("sigma_total_used_b", &reaction_data.sigma_total_used_b, "sigma_total_used_b/D");
+  reaction_tree->Branch("sigma_165_sampling_b", &reaction_data.sigma_165_sampling_b, "sigma_165_sampling_b/D");
+  reaction_tree->Branch("sigma_675_sampling_b", &reaction_data.sigma_675_sampling_b, "sigma_675_sampling_b/D");
+  reaction_tree->Branch("sigma_background_sampling_b", &reaction_data.sigma_background_sampling_b, "sigma_background_sampling_b/D");
+  reaction_tree->Branch("sigma_3alpha_sampling_total_b", &reaction_data.sigma_3alpha_sampling_total_b, "sigma_3alpha_sampling_total_b/D");
+  reaction_tree->Branch("sigma_model_sum_b", &reaction_data.sigma_model_sum_b, "sigma_model_sum_b/D");
+  reaction_tree->Branch("model_scale_factor", &reaction_data.model_scale_factor, "model_scale_factor/D");
+  reaction_tree->Branch("cross_section_bias_factor", &reaction_data.cross_section_bias_factor, "cross_section_bias_factor/D");
+  reaction_tree->Branch("background_bias_factor", &reaction_data.background_bias_factor, "background_bias_factor/D");
+  reaction_tree->Branch("sigma_background_b", &reaction_data.sigma_background_b, "sigma_background_b/D");
+  reaction_tree->Branch("sigma_3alpha_eval_b", &reaction_data.sigma_3alpha_eval_b, "sigma_3alpha_eval_b/D");
+  reaction_tree->Branch("sigma_gamma_165_0_b", &reaction_data.sigma_gamma_165_0_b, "sigma_gamma_165_0_b/D");
+  reaction_tree->Branch("sigma_gamma_165_1_b", &reaction_data.sigma_gamma_165_1_b, "sigma_gamma_165_1_b/D");
+  reaction_tree->Branch("sigma_gamma_165_total_b", &reaction_data.sigma_gamma_165_total_b, "sigma_gamma_165_total_b/D");
+  reaction_tree->Branch("sigma_gamma_675_total_b", &reaction_data.sigma_gamma_675_total_b, "sigma_gamma_675_total_b/D");
+  reaction_tree->Branch("sigma_gamma_total_b", &reaction_data.sigma_gamma_total_b, "sigma_gamma_total_b/D");
+  reaction_tree->Branch("sigma_total_physical_all_b", &reaction_data.sigma_total_physical_all_b, "sigma_total_physical_all_b/D");
+  reaction_tree->Branch("sigma_total_sampling_all_b", &reaction_data.sigma_total_sampling_all_b, "sigma_total_sampling_all_b/D");
+  reaction_tree->Branch("sigma_gamma_165_0_physical_b", &reaction_data.sigma_gamma_165_0_physical_b, "sigma_gamma_165_0_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_165_1_physical_b", &reaction_data.sigma_gamma_165_1_physical_b, "sigma_gamma_165_1_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_675_physical_b", &reaction_data.sigma_gamma_675_physical_b, "sigma_gamma_675_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_165_0_sampling_b", &reaction_data.sigma_gamma_165_0_sampling_b, "sigma_gamma_165_0_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_165_1_sampling_b", &reaction_data.sigma_gamma_165_1_sampling_b, "sigma_gamma_165_1_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_675_sampling_b", &reaction_data.sigma_gamma_675_sampling_b, "sigma_gamma_675_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_ground_physical_b", &reaction_data.sigma_gamma_675_to_ground_physical_b, "sigma_gamma_675_to_ground_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_4439_physical_b", &reaction_data.sigma_gamma_675_to_4439_physical_b, "sigma_gamma_675_to_4439_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_7654_physical_b", &reaction_data.sigma_gamma_675_to_7654_physical_b, "sigma_gamma_675_to_7654_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_12710_physical_b", &reaction_data.sigma_gamma_675_to_12710_physical_b, "sigma_gamma_675_to_12710_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_15110_physical_b", &reaction_data.sigma_gamma_675_to_15110_physical_b, "sigma_gamma_675_to_15110_physical_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_ground_sampling_b", &reaction_data.sigma_gamma_675_to_ground_sampling_b, "sigma_gamma_675_to_ground_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_4439_sampling_b", &reaction_data.sigma_gamma_675_to_4439_sampling_b, "sigma_gamma_675_to_4439_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_7654_sampling_b", &reaction_data.sigma_gamma_675_to_7654_sampling_b, "sigma_gamma_675_to_7654_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_12710_sampling_b", &reaction_data.sigma_gamma_675_to_12710_sampling_b, "sigma_gamma_675_to_12710_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_675_to_15110_sampling_b", &reaction_data.sigma_gamma_675_to_15110_sampling_b, "sigma_gamma_675_to_15110_sampling_b/D");
+  reaction_tree->Branch("sigma_gamma_sampling_total_b", &reaction_data.sigma_gamma_sampling_total_b, "sigma_gamma_sampling_total_b/D");
+  reaction_tree->Branch("sigma_total_all_b", &reaction_data.sigma_total_all_b, "sigma_total_all_b/D");
+  reaction_tree->Branch("channel_probability_165", &reaction_data.channel_probability_165, "channel_probability_165/D");
+  reaction_tree->Branch("channel_probability_675", &reaction_data.channel_probability_675, "channel_probability_675/D");
+  reaction_tree->Branch("channel_probability_background", &reaction_data.channel_probability_background, "channel_probability_background/D");
+  reaction_tree->Branch("channel_probability_gamma", &reaction_data.channel_probability_gamma, "channel_probability_gamma/D");
+  reaction_tree->Branch("probability_gamma_165_0", &reaction_data.probability_gamma_165_0, "probability_gamma_165_0/D");
+  reaction_tree->Branch("probability_gamma_165_1", &reaction_data.probability_gamma_165_1, "probability_gamma_165_1/D");
+  reaction_tree->Branch("probability_gamma_675_total", &reaction_data.probability_gamma_675_total, "probability_gamma_675_total/D");
+  reaction_tree->Branch("probability_gamma_675_to_ground", &reaction_data.probability_gamma_675_to_ground, "probability_gamma_675_to_ground/D");
+  reaction_tree->Branch("probability_gamma_675_to_4439", &reaction_data.probability_gamma_675_to_4439, "probability_gamma_675_to_4439/D");
+  reaction_tree->Branch("probability_gamma_675_to_7654", &reaction_data.probability_gamma_675_to_7654, "probability_gamma_675_to_7654/D");
+  reaction_tree->Branch("probability_gamma_675_to_12710", &reaction_data.probability_gamma_675_to_12710, "probability_gamma_675_to_12710/D");
+  reaction_tree->Branch("probability_gamma_675_to_15110", &reaction_data.probability_gamma_675_to_15110, "probability_gamma_675_to_15110/D");
+  reaction_tree->Branch("reaction", reaction_data.reaction, "reaction/C");
+
+  if (!reaction_tree) {
+    G4cout << "\n can't create tree" << G4endl;
+    return;
+  }
+  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::FillReactionTree(H11BReactionData& data)
 {
-  reaction_data = data; 
+  if (!reaction_tree) return;
 
+  reaction_data = data;
   reaction_tree->Fill();
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::CloseReactionFile()
 {
-  if(!reaction_file){
-    return;
-  }
+  if (!reaction_file) return;
 
   reaction_file->cd();
-  reaction_tree->Write();
+  if (run_info_tree) run_info_tree->Write();
+  if (reaction_tree) reaction_tree->Write();
   reaction_file->Close();
-
-  G4cout << "\n----> reaction tree is saved.\n" << G4endl;
+  G4cout << "\n----> reaction tree is saved.\n\n";
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::OpenEventFile()
 {
-  time_t t;
-  struct tm* tt;
-  t=time(0);
-  tt=localtime(&t);
-  sprintf(file_name, "%d%02d%02d_%02dh%02dm%02ds", tt->tm_year+1900, tt->tm_mon+1, tt->tm_mday, tt->tm_hour, tt->tm_min, tt->tm_sec);
+  FillThreadedFileTag(file_name, sizeof(file_name));
   G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
 
-  std::stringstream ss;
-  ss.str("");
-  ss << DATAPATH << "/event_" << file_name << ".root";
+  const auto output_path = HBOutputPath::MakeOutputFilePath("event", file_name);
 
-  event_file = new TFile(ss.str().c_str(), "RECREATE");
-  //  check file_in
-  if(!event_file){
-    G4cout << " RootIO::" << " problem creating the ROOT TFile!!!" << G4endl;
-    return ;
-    }else{
-      G4cout << " RootIO::" << " successful creating the " << ss.str().c_str() << "  !!!" << G4endl; 
-    }
+  event_file = new TFile(output_path.string().c_str(), "RECREATE");
+  if (!event_file) {
+    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
+    return;
+  }
+  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
 
-    //  creat tree
-    event_tree = new TTree("tr", "event simulation data");
+  event_tree = new TTree("tr", "event simulation data");
+  event_tree->Branch("event", &event_data.event, "event/L");
+  event_tree->Branch("detector_type", &event_data.detector_type, "detector_type/I");
+  event_tree->Branch("array_id", &event_data.array_id, "array_id/I");
+  event_tree->Branch("ring_id", &event_data.ring_id, "ring_id/I");
+  event_tree->Branch("module_id", &event_data.module_id, "module_id/I");
+  event_tree->Branch("segment_id", &event_data.segment_id, "segment_id/I");
+  event_tree->Branch("copy_no", &event_data.copy_no, "copy_no/I");
+  event_tree->Branch("ring", &event_data.ring, "ring/I");
+  event_tree->Branch("sector", &event_data.sector, "sector/I");
+  event_tree->Branch("e", &event_data.e, "e/D");
+  event_tree->Branch("time", &event_data.time, "time/D");
+  event_tree->Branch("x", &event_data.x, "x/D");
+  event_tree->Branch("y", &event_data.y, "y/D");
+  event_tree->Branch("z", &event_data.z, "z/D");
+  event_tree->Branch("pdg", &event_data.pdg, "pdg/I");
+  event_tree->Branch("track_id", &event_data.track_id, "track_id/I");
+  event_tree->Branch("parent_id", &event_data.parent_id, "parent_id/I");
+  event_tree->Branch("detector", event_data.detector, "detector/C");
 
-    event_tree->Branch("event", &event_data.event, "event/L");
-    event_tree->Branch("ring", &event_data.ring, "ring/I");
-    event_tree->Branch("sector", &event_data.sector, "sector/I");
-    event_tree->Branch("e", &event_data.e, "e/D");
-    event_tree->Branch("x", &event_data.x, "x/D");
-    event_tree->Branch("y", &event_data.y, "y/D");
-    event_tree->Branch("z", &event_data.z, "z/D");
-    event_tree->Branch("detector", event_data.detector, "detector/C");
-
-    if(!event_tree){
-      G4cout << "\n can't create tree" << G4endl;
-      return ;
-    }
-
-    G4cout << "\n----> Tree file is opened in " << ss.str() << G4endl;
+  if (!event_tree) {
+    G4cout << "\n can't create tree" << G4endl;
+    return;
+  }
+  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::FillEventTree(EventData& data)
 {
+  if (!event_tree) return;
+
   event_data = data;
   event_tree->Fill();
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::CloseEventFile()
 {
-  if(!event_file){
-    return;
-  }
+  if (!event_file) return;
 
   event_file->cd();
-  event_tree->Write();
+  if (event_tree) event_tree->Write();
   event_file->Close();
-
-  G4cout << "\n----> event tree is saved.\n" << G4endl;
+  G4cout << "\n----> event tree is saved.\n\n";
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::OpenTrackFile()
 {
-  time_t t;
-  struct tm* tt;
-  t=time(0);
-  tt=localtime(&t);
-  sprintf(file_name, "%d%02d%02d_%02dh%02dm%02ds", tt->tm_year+1900, tt->tm_mon+1, tt->tm_mday, tt->tm_hour, tt->tm_min, tt->tm_sec);
+  FillThreadedFileTag(file_name, sizeof(file_name));
   G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
-  std::stringstream ss;
-  ss.str("");
-  ss << DATAPATH << "/track_" << file_name << ".root";
-  track_file = new TFile(ss.str().c_str(), "RECREATE");
-  //  check file_in
-  if(!track_file){
-    G4cout << " RootIO::" << " problem creating the ROOT TFile!!!" << G4endl;
-    return ;
-  }else{
-    G4cout << " RootIO::" << " successful creating the " << ss.str().c_str() << "  !!!" << G4endl; 
+
+  const auto output_path = HBOutputPath::MakeOutputFilePath("track", file_name);
+
+  track_file = new TFile(output_path.string().c_str(), "RECREATE");
+  if (!track_file) {
+    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
+    return;
   }
-  //  creat tree
+  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
+
   track_tree = new TTree("tr", "track simulation data");
   track_tree->Branch("event", &track_data.event, "event/L");
   track_tree->Branch("track", &track_data.track, "track/I");
@@ -224,55 +347,48 @@ void RootIO::OpenTrackFile()
   track_tree->Branch("volume", track_data.volume, "volume/C");
   track_tree->Branch("particle", track_data.particle, "particle/C");
 
-  if(!track_tree){
+  if (!track_tree) {
     G4cout << "\n can't create tree" << G4endl;
-    return ;
+    return;
   }
-  G4cout << "\n----> Tree file is opened in " << ss.str() << G4endl;
+  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::FillTrackTree(TrackData& data)
 {
+  if (!track_tree) return;
+
   track_data = data;
   track_tree->Fill();
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::CloseTrackFile()
 {
-  if(!track_file){
-    return;
-  }
+  if (!track_file) return;
 
   track_file->cd();
-  track_tree->Write();
+  if (track_tree) track_tree->Write();
   track_file->Close();
-
-  G4cout << "\n----> track tree is saved.\n" << G4endl;
+  G4cout << "\n----> track tree is saved.\n\n";
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::OpenStepFile()
 {
-  time_t t;
-  struct tm* tt;
-  t=time(0);
-  tt=localtime(&t);
-  sprintf(file_name, "%d%02d%02d_%02dh%02dm%02ds", tt->tm_year+1900, tt->tm_mon+1, tt->tm_mday, tt->tm_hour, tt->tm_min, tt->tm_sec);
+  FillThreadedFileTag(file_name, sizeof(file_name));
   G4cout << "\n----> Tree file is opened in " << file_name << G4endl;
-  std::stringstream ss;
-  ss.str("");
-  ss << DATAPATH << "/step_" << file_name << ".root";
-  step_file = new TFile(ss.str().c_str(), "RECREATE");
-  //  check file_in
-  if(!step_file){
-    G4cout << " RootIO::" << " problem creating the ROOT TFile!!!" << G4endl;
-    return ;
-  }else{
-    G4cout << " RootIO::" << " successful creating the " << ss.str().c_str() << "  !!!" << G4endl; 
+
+  const auto output_path = HBOutputPath::MakeOutputFilePath("step", file_name);
+
+  step_file = new TFile(output_path.string().c_str(), "RECREATE");
+  if (!step_file) {
+    G4cout << " RootIO:: problem creating the ROOT TFile!!!" << G4endl;
+    return;
   }
-  //  creat tree
+  G4cout << " RootIO:: successful creating the " << output_path.string() << "  !!!" << G4endl;
+
   step_tree = new TTree("tr", "step simulation data");
   step_tree->Branch("event", &step_data.event, "event/L");
   step_tree->Branch("track", &step_data.track, "track/I");
@@ -291,32 +407,30 @@ void RootIO::OpenStepFile()
   step_tree->Branch("volume", step_data.volume, "volume/C");
   step_tree->Branch("particle", step_data.particle, "particle/C");
   step_tree->Branch("process", step_data.process, "process/C");
-  
-  if(!step_tree){
+
+  if (!step_tree) {
     G4cout << "\n can't create tree" << G4endl;
-    return ;
+    return;
   }
-  G4cout << "\n----> Tree file is opened in " << ss.str() << G4endl;
+  G4cout << "\n----> Tree file is opened in " << output_path.string() << G4endl;
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::FillStepTree(StepData& data)
 {
+  if (!step_tree) return;
+
   step_data = data;
   step_tree->Fill();
 }
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void RootIO::CloseStepFile()
 {
-  if(!step_file){
-    return;
-  }
+  if (!step_file) return;
 
   step_file->cd();
-  step_tree->Write();
+  if (step_tree) step_tree->Write();
   step_file->Close();
-
-  G4cout << "\n----> step tree is saved.\n" << G4endl;
+  G4cout << "\n----> step tree is saved.\n\n";
 }
-

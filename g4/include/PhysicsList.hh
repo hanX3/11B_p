@@ -1,13 +1,13 @@
 // copy froam extended/radioactivedecay/rdecay02
 
-#ifndef PhysicsList_h
-#define PhysicsList_h 1
+#ifndef PhysicsList_H
+#define PhysicsList_H 1
 
 #include "G4VModularPhysicsList.hh"
 #include "globals.hh"
 
-//
-class PhysicsList: public G4VModularPhysicsList
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+class PhysicsList : public G4VModularPhysicsList
 {
 public:
   PhysicsList();

@@ -1,0 +1,41 @@
+# Build directories
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+
+# Geant4 / ROOT / simulation outputs
+*.root
+*.dat
+*.out
+*.log
+*.csv
+*.png
+*.pdf
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+
+# Temporary files
+*.tmp
+*.bak
+*~
+.DS_Store
+AGENTS.md
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor files
+.vscode/
+.idea/
+data/
+gpt/
+.clang-format

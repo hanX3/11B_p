@@ -1,5 +1,5 @@
-#ifndef RunAction_h
-#define RunAction_h 1
+#ifndef RunAction_H
+#define RunAction_H 1
 
 #include "Constants.hh"
 #include "G4UserRunAction.hh"
@@ -14,18 +14,21 @@ class RootIO;
 class RunAction : public G4UserRunAction
 {
 public:
-  RunAction(RootIO *r_io);
+  RunAction(RootIO* r_io);
   ~RunAction() override;
 
   void BeginOfRunAction(const G4Run* run) override;
   void EndOfRunAction(const G4Run* run) override;
 
 public:
-  RootIO *GetRootIO() { return root_io; }
+  RootIO* GetRootIO()
+  {
+    return root_io;
+  }
 
 private:
-  G4Timer *timer;
-  RootIO *root_io;
+  G4Timer* timer;
+  RootIO* root_io;
 };
 
 #endif

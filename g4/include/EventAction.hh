@@ -1,5 +1,5 @@
-#ifndef B2EventAction_h
-#define B2EventAction_h 1
+#ifndef B2EventAction_H
+#define B2EventAction_H 1
 
 #include "Constants.hh"
 #include "DataStructure.hh"
@@ -8,17 +8,16 @@
 
 class RootIO;
 class TFile;
-class PrimaryGeneratorAction;
 
-//
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 class EventAction : public G4UserEventAction
 {
 public:
-  EventAction(PrimaryGeneratorAction *pg, RootIO *rio);
+  explicit EventAction(RootIO* root_io);
   ~EventAction() override;
 
-  void  BeginOfEventAction(const G4Event *) override;
-  void  EndOfEventAction(const G4Event *) override;
+  void BeginOfEventAction(const G4Event*) override;
+  void EndOfEventAction(const G4Event*) override;
 
 private:
   void GausEnergy(G4double res);
@@ -39,9 +38,7 @@ private:
 private:
   EventData event_data;
 
-  PrimaryGeneratorAction *primary;
-  RootIO *root_io;   
+  RootIO* root_io;
 };
-
 
 #endif
