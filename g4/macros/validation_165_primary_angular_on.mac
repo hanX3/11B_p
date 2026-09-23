@@ -1,0 +1,53 @@
+# =====================================================================
+# validation_165_primary_angular_on.mac
+#
+# Purpose: generate 165-keV sequential-decay events with the primary-alpha
+#          angular distribution ENABLED, so the sampled cos(theta) can be
+#          compared against the input W(theta) = 1 + a1 P1 + a2 P2.
+#
+# Read from the reaction tree:
+#   cos_theta_primary_cm : primary-alpha cos(theta) w.r.t. beam, 12C c.m. frame
+#   branch_id            : 0 = alpha0 channel, 1 = alpha1 channel
+#   primary_a1_used      : a1 actually used for that event (per branch)
+#   primary_a2_used      : a2 actually used for that event (per branch)
+#
+# Coefficients (branch-resolved defaults, from Constants.hh):
+#   alpha0: a1 = 0.0, a2 = 0.6   (Becker 1987 Fig.10, 148 keV)
+#   alpha1: a1 = 0.0, a2 = 0.0   (isotropic, Spraker 2012)
+# The lines below re-assert them explicitly so the run is self-documenting;
+# edit them to scan other values.
+# =====================================================================
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 165 keV
+
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+
+/h11b/crossSectionBiasFactor 1000000000
+/h11b/enableDirectDecay false
+/h11b/165SequentialDecayFraction 1.0
+
+/h11b/enable165GammaCapture false
+/h11b/enable675GammaCapture false
+
+# --- enable the primary angular distribution, branch-resolved ---
+/h11b/enable165PrimaryAngularDistribution true
+/h11b/165PrimaryAlpha0AngularA1 0.0
+/h11b/165PrimaryAlpha0AngularA2 0.6
+/h11b/165PrimaryAngularA1 0.0
+/h11b/165PrimaryAngularA2 0.0
+
+/h11b/printConfig
+/output/printConfig
+
+/run/beamOn 1000000

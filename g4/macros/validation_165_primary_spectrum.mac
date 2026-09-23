@@ -1,0 +1,61 @@
+# =====================================================================
+# validation_165_primary_spectrum.mac
+#
+# Purpose: generate 165-keV sequential-decay events so the primary-alpha
+#          energy spectra of the alpha0 (-> 8Be g.s.) and alpha1 (-> 8Be 2+)
+#          channels can be extracted directly from the reaction tree.
+#
+# Read from the reaction tree:
+#   e_alpha1      : primary-alpha lab kinetic energy (MeV)
+#   e_alpha1_cm   : primary-alpha c.m. kinetic energy (MeV)
+#   branch_id     : 0 = alpha0 channel, 1 = alpha1 channel
+#
+# Notes:
+#   * The energy spectrum is pure kinematics, so the primary angular
+#     distribution is irrelevant here -> left OFF (isotropic).
+#   * Cross-section bias is opened wide to accumulate statistics fast;
+#     it changes only the reaction RATE, not the kinematics or the
+#     alpha0/alpha1 branching, so spectra are unaffected.
+#   * SequentialDecayFraction = 1.0 forces the two-step 12C* -> a + 8Be
+#     -> 3a path (which is what produces alpha0/alpha1). Do NOT set this
+#     to 0 (that selects direct 3a and gives no alpha0/alpha1 peaks).
+# =====================================================================
+
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 165 keV
+
+# --- output: only the reaction tree is needed ---
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+
+# --- open the cross section wide (rate only; kinematics untouched) ---
+/h11b/crossSectionBiasFactor 1000000000
+
+# --- force sequential decay so alpha0 AND alpha1 are produced ---
+/h11b/enableDirectDecay false
+/h11b/165SequentialDecayFraction 1.0
+
+# --- turn off competing channels for a clean primary-alpha sample ---
+/h11b/enable165GammaCapture false
+/h11b/enable675GammaCapture false
+
+# --- angular distribution OFF: spectra are independent of it ---
+/h11b/enable165PrimaryAngularDistribution false
+
+/h11b/printConfig
+/output/printConfig
+
+# The alpha0/alpha1 split follows the partial widths automatically:
+#   P(alpha0) = Gamma_a0 / (Gamma_a0 + Gamma_a1) = 0.26 / (0.26 + 5.0) ~ 5%.
+# So most events are alpha1; alpha0 is ~1/20. 1e6 events give ~5e4 alpha0,
+# plenty for a clean spectrum. Reduce to 2e5 if you only need alpha1 shape.
+/run/beamOn 1000000

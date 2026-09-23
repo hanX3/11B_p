@@ -4,6 +4,7 @@
 #include "PhysicsList.hh"
 #include "OutputConfig.hh"
 #include "OutputPath.hh"
+#include "SiArrayConfig.hh"
 
 #include "G4RunManagerFactory.hh"
 #include "G4UImanager.hh"
@@ -109,6 +110,10 @@ int main(int argc, char** argv)
   }
 
   auto output_config = std::make_unique<OutputConfig>();
+  // Si array geometry / strip-segmentation controls under /si/.  Constructed
+  // before /run/initialize so geometry-affecting values can be set from a macro
+  // ahead of DetectorConstruction, and runs a copy_no encoding self-test.
+  auto si_array_config = std::make_unique<SiArrayConfig>();
 
   auto detector = new DetectorConstruction();
   run_manager->SetUserInitialization(detector);

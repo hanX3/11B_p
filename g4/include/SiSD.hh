@@ -8,6 +8,7 @@
 #include "G4Step.hh"
 #include "G4HCofThisEvent.hh"
 
+#include <map>
 #include <vector>
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -25,6 +26,11 @@ public:
 private:
   SiHitsCollection* hits_collection;
   G4int hc_id;
+
+  // Strip-segmented readout: hits are created lazily, one per fired
+  // (module, segment) i.e. one per encoded copy_no.  This map holds the index
+  // of the already-created hit for a given copy_no within the current event.
+  std::map<G4int, G4int> map_copyno_to_hit_index;
 };
 
 #endif

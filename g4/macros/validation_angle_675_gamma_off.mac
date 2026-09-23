@@ -1,8 +1,0 @@
-/control/execute macros/validation_angle_common.mac
-/gun/energy 675 keV
-/h11b/gammaBiasFactor 1000000000
-/h11b/enable165GammaCapture false
-/h11b/enable675GammaCapture true
-/h11b/enable675GammaAngularDistribution false
-/h11b/printConfig
-/run/beamOn 200000

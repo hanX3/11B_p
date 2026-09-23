@@ -1,5 +1,6 @@
 #include "PrimaryGeneratorAction.hh"
 #include "Constants.hh"
+#include "SiArrayConfig.hh"
 
 #include "G4LogicalVolumeStore.hh"
 #include "G4LogicalVolume.hh"
@@ -40,6 +41,16 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* an_event)
 {
+  // Detector-commissioning mode (default off): replace the proton beam with a
+  // forward alpha source placed just downstream of the target backing so the
+  // alphas are not absorbed in the target, illuminating the forward annular
+  // DSSD.  This exercises the forward-ring hit recording and segmentation; it
+  // does not touch the 11B reaction / cross-section / decay physics.
+  if (SiArrayConfig::GetForwardAlphaTestBeam()) {
+    GenerateForwardAlphaTestPrimary(an_event);
+    return;
+  }
+
   G4double r0 = BeamR * std::sqrt(G4UniformRand());
   G4double theta = (2. * CLHEP::pi) * G4UniformRand();
   G4double x0 = r0 * std::sin(theta);
@@ -49,5 +60,34 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* an_event)
   particle_gun->SetParticlePosition(G4ThreeVector(x0, y0, z0));
   particle_gun->SetParticleMomentumDirection(G4ThreeVector(0., 0., 1.));
 
+  particle_gun->GeneratePrimaryVertex(an_event);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void PrimaryGeneratorAction::GenerateForwardAlphaTestPrimary(G4Event* an_event)
+{
+  // Launch point just downstream of the target backing (target back face at
+  // TargetZPos + TargetThickness/2, backing extends TargetBackingThickness
+  // further) so the alpha starts in vacuum and flies toward the forward ring.
+  const G4double z0 = TargetZPos + TargetThickness / 2. + TargetBackingThickness + 0.5 * mm;
+  const G4double z_ring = TargetZPos + SiArrayConfig::GetForwardDistance();
+  const G4double dz = std::max(z_ring - z0, 1. * mm);
+
+  // Sample a forward cone whose half-angles map onto the annular active radius
+  // (inner ~8 mm, outer ~60 mm), staying safely inside both edges.
+  const G4double r_inner_target = 12. * mm;
+  const G4double r_outer_target = 55. * mm;
+  const G4double cos_min = dz / std::sqrt(dz * dz + r_outer_target * r_outer_target);
+  const G4double cos_max = dz / std::sqrt(dz * dz + r_inner_target * r_inner_target);
+  const G4double cos_theta = cos_min + (cos_max - cos_min) * G4UniformRand();
+  const G4double sin_theta = std::sqrt(std::max(0., 1. - cos_theta * cos_theta));
+  const G4double phi = CLHEP::twopi * G4UniformRand();
+
+  const G4ThreeVector direction(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
+
+  particle_gun->SetParticleDefinition(G4ParticleTable::GetParticleTable()->FindParticle("alpha"));
+  particle_gun->SetParticleEnergy(SiArrayConfig::GetForwardAlphaTestBeamEnergy());
+  particle_gun->SetParticlePosition(G4ThreeVector(0., 0., z0));
+  particle_gun->SetParticleMomentumDirection(direction);
   particle_gun->GeneratePrimaryVertex(an_event);
 }

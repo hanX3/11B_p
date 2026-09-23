@@ -243,17 +243,31 @@ def check_ids(checks: CheckSet, event: dict[str, np.ndarray]) -> None:
     if det is None or copy_no is None:
         checks.add("FAIL", "event detector identifiers", "detector_type or copy_no branch is missing")
         return
+    # Widened decimal copy-number layout (see include/DetectorChannel.hh):
+    #   copy_no = type*1e8 + array*1e7 + ring*1e5 + module*1e3 + segment
+    # segment now spans 3 decimal digits (0..999) to hold DSSD strip ids, so the
+    # per-field decode below must use the wider place values.
+    TYPE_UNIT = 100_000_000
+    ARRAY_UNIT = 10_000_000
+    RING_UNIT = 100_000
+    MODULE_UNIT = 1_000
+    cn = copy_no.astype(np.int64)
     invalid_types = ~np.isin(det.astype(int), [1, 2, 3])
-    invalid_copy = copy_no.astype(int) < 100000
-    decoded_type = copy_no.astype(int) // 100000
+    invalid_copy = cn < TYPE_UNIT
+    decoded_type = cn // TYPE_UNIT
     mismatch_type = decoded_type != det.astype(int)
     bad_geo = np.zeros(det.shape, dtype=bool)
     if ring is not None:
         bad_geo |= ring.astype(int) < 0
+        # ring branch must agree with the ring field encoded in copy_no
+        bad_geo |= (cn % TYPE_UNIT % ARRAY_UNIT) // RING_UNIT != ring.astype(np.int64)
     if module is not None:
         bad_geo |= module.astype(int) < 0
+        bad_geo |= (cn % RING_UNIT) // MODULE_UNIT != module.astype(np.int64)
     if segment is not None:
         bad_geo |= segment.astype(int) < 0
+        # segment branch must agree with the segment field encoded in copy_no
+        bad_geo |= cn % MODULE_UNIT != segment.astype(np.int64)
     n_bad = int((invalid_types | invalid_copy | mismatch_type | bad_geo).sum())
     if n_bad:
         checks.add(

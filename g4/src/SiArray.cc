@@ -1,5 +1,6 @@
 #include "SiArray.hh"
 #include "SiDetector.hh"
+#include "SiArrayConfig.hh"
 
 #include <cmath>
 #include "G4PhysicalConstants.hh"
@@ -59,6 +60,9 @@ void SiArray::Construct()
   std::map<G4int, G4String> map_i2name;
   G4int ii = 0;
   for (auto map_it = SiDetector::map_name_to_ring_id.begin(); map_it != SiDetector::map_name_to_ring_id.end(); map_it++) {
+    // The forward annular DSSD is optional; skip building it when disabled so
+    // the geometry and sensitive-detector list stay consistent.
+    if (map_it->first == "Si_ForwardAnnular" && !SiArrayConfig::GetEnableForwardAnnular()) continue;
     for (G4int j = 0; j < SiDetector::map_name_to_sectors[map_it->first]; j++) {
       map_i2ring[ii] = map_it->second;
       map_i2sector[ii] = j;
@@ -66,6 +70,7 @@ void SiArray::Construct()
       ii++;
     }
   }
+  si_numbers = ii;
 
   for (auto map_it = map_i2ring.begin(); map_it != map_i2ring.end(); map_it++) {
     G4cout << "i " << map_it->first << " ring " << map_it->second << G4endl;
@@ -122,7 +127,14 @@ G4Transform3D SiArray::CalculatePlacement(G4String name, G4int sector_id)
 
   const G4double x = SiDetector::map_placement_par[name][0] * mm;
   const G4double y = SiDetector::map_placement_par[name][1] * mm;
-  const G4double z = SiDetector::map_placement_par[name][2] * mm;
+  // The axial distance of the two annular DSSDs is driven by SiArrayConfig so
+  // it can be scanned from a macro; other detectors fall back to the map value.
+  G4double z = SiDetector::map_placement_par[name][2] * mm;
+  if (name == "Si_BackwardAnnular") {
+    z = TargetZPos - SiArrayConfig::GetBackwardDistance();
+  } else if (name == "Si_ForwardAnnular") {
+    z = TargetZPos + SiArrayConfig::GetForwardDistance();
+  }
   const G4ThreeVector pos(x, y, z);
   return G4Transform3D(MakeRotationLocalZToDirection(target_pos - pos), pos);
 }

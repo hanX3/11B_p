@@ -42,27 +42,3 @@ file(GLOB headers CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/include/*.hh)
 # Executable.
 add_executable(HB HB.cc ${sources} ${headers})
 target_link_libraries(HB ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
-
-#----------------------------------------------------------------------------
-# Runtime files
-
-# Keep batch.sh in the build directory.
-configure_file(
-  ${PROJECT_SOURCE_DIR}/batch.sh
-  ${PROJECT_BINARY_DIR}/batch.sh
-  COPYONLY
-)
-
-# Copy the complete macros directory to the build directory at build time.
-# This ensures newly added validation macros are also available under build/macros/.
-add_custom_target(copy_macros ALL
-  COMMAND ${CMAKE_COMMAND} -E remove_directory
-          ${PROJECT_BINARY_DIR}/macros
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${PROJECT_SOURCE_DIR}/macros
-          ${PROJECT_BINARY_DIR}/macros
-  COMMENT "Copying macros directory to build directory"
-)
-
-# Ensure macros are copied when building the main executable.
-add_dependencies(HB copy_macros)

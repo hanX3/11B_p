@@ -12,6 +12,8 @@ namespace {
 G4bool g_enable_165_primary_angular_distribution = H11BDefaultEnable165PrimaryAngularDistribution;
 G4double g_165_primary_a1 = H11BDefault165PrimaryAngularA1;
 G4double g_165_primary_a2 = H11BDefault165PrimaryAngularA2;
+G4double g_165_primary_a0_a1 = H11BDefault165PrimaryAlpha0AngularA1;
+G4double g_165_primary_a0_a2 = H11BDefault165PrimaryAlpha0AngularA2;
 
 G4bool g_enable_675_primary_angular_distribution = H11BDefaultEnable675PrimaryAngularDistribution;
 G4double g_675_primary_a1 = H11BDefault675PrimaryAngularA1;
@@ -92,10 +94,16 @@ void Validate165PrimaryAngularDistribution()
 {
   ValidatePrimaryAngularDistribution("H11BConfig::Validate165PrimaryAngularDistribution",
                                      "H11B165PrimaryAngular001",
-                                     "165-keV primary alpha angular distribution has negative weight.",
+                                     "165-keV primary alpha1 angular distribution has negative weight.",
                                      g_enable_165_primary_angular_distribution,
                                      g_165_primary_a1,
                                      g_165_primary_a2);
+  ValidatePrimaryAngularDistribution("H11BConfig::Validate165PrimaryAngularDistribution",
+                                     "H11B165PrimaryAngular002",
+                                     "165-keV primary alpha0 angular distribution has negative weight.",
+                                     g_enable_165_primary_angular_distribution,
+                                     g_165_primary_a0_a1,
+                                     g_165_primary_a0_a2);
 }
 
 void Validate675PrimaryAngularDistribution()
@@ -209,10 +217,36 @@ G4double Get165PrimaryAngularA2()
   return g_165_primary_a2;
 }
 
+void Set165PrimaryAlpha0AngularA1(G4double value)
+{
+  g_165_primary_a0_a1 = value;
+  Validate165PrimaryAngularDistribution();
+}
+
+void Set165PrimaryAlpha0AngularA2(G4double value)
+{
+  g_165_primary_a0_a2 = value;
+  Validate165PrimaryAngularDistribution();
+}
+
+G4double Get165PrimaryAlpha0AngularA1()
+{
+  return g_165_primary_a0_a1;
+}
+
+G4double Get165PrimaryAlpha0AngularA2()
+{
+  return g_165_primary_a0_a2;
+}
+
 std::pair<G4double, G4double> Get165PrimaryA1A2(G4bool alpha1_branch)
 {
-  (void)alpha1_branch;
-  return {g_165_primary_a1, g_165_primary_a2};
+  // alpha1 -> 8Be(2+): isotropic coefficients (Spraker 2012).
+  // alpha0 -> 8Be(g.s.): Becker 1987 Fig.10 coefficients.
+  if (alpha1_branch) {
+    return {g_165_primary_a1, g_165_primary_a2};
+  }
+  return {g_165_primary_a0_a1, g_165_primary_a0_a2};
 }
 
 G4bool GetEnable675PrimaryAngularDistribution()

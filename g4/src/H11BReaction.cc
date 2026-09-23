@@ -796,6 +796,18 @@ void H11BReaction::Set165PrimaryAngularA2Command(G4double value)
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set165PrimaryAlpha0AngularA1Command(G4double value)
+{
+  H11BConfig::Set165PrimaryAlpha0AngularA1(value);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set165PrimaryAlpha0AngularA2Command(G4double value)
+{
+  H11BConfig::Set165PrimaryAlpha0AngularA2(value);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void H11BReaction::SetEnable165Alpha1SecondaryAngularCorrelationCommand(G4bool enabled)
 {
   H11BConfig::SetEnable165Alpha1SecondaryAngularCorrelation(enabled);
@@ -885,9 +897,11 @@ void H11BReaction::PrintConfigCommand()
          << "  675DirectDecayFraction       = " << 1.0 - H11BCrossSection::Get675SequentialDecayFraction() << G4endl
          << G4endl
          << "  165 primary alpha angular distribution" << G4endl
-         << "    enable = " << (H11BConfig::GetEnable165PrimaryAngularDistribution() ? "true" : "false") << G4endl
-         << "    a1     = " << H11BConfig::Get165PrimaryAngularA1() << G4endl
-         << "    a2     = " << H11BConfig::Get165PrimaryAngularA2() << G4endl
+         << "    enable   = " << (H11BConfig::GetEnable165PrimaryAngularDistribution() ? "true" : "false") << G4endl
+         << "    a1 (a1ch)= " << H11BConfig::Get165PrimaryAngularA1() << G4endl
+         << "    a2 (a1ch)= " << H11BConfig::Get165PrimaryAngularA2() << G4endl
+         << "    a1 (a0ch)= " << H11BConfig::Get165PrimaryAlpha0AngularA1() << G4endl
+         << "    a2 (a0ch)= " << H11BConfig::Get165PrimaryAlpha0AngularA2() << G4endl
          << "  165 alpha1 secondary angular correlation" << G4endl
          << "    enable = " << (H11BConfig::GetEnable165Alpha1SecondaryAngularCorrelation() ? "true" : "false") << G4endl
          << "    a2     = " << H11BConfig::Get165Alpha1SecondaryA2() << G4endl
@@ -966,8 +980,10 @@ void H11BReaction::DefineCommands()
   messenger->DeclareMethod("675StrictMaxSamplingAttempts", &H11BReaction::Set675StrictMaxSamplingAttemptsCommand, "Set max rejection-sampling attempts for strict 675-keV alpha model");
 
   messenger->DeclareMethod("enable165PrimaryAngularDistribution", &H11BReaction::SetEnable165PrimaryAngularDistributionCommand, "Enable 165-keV primary alpha A1/A2 angular distribution");
-  messenger->DeclareMethod("165PrimaryAngularA1", &H11BReaction::Set165PrimaryAngularA1Command, "Set 165-keV primary alpha A1 coefficient");
-  messenger->DeclareMethod("165PrimaryAngularA2", &H11BReaction::Set165PrimaryAngularA2Command, "Set 165-keV primary alpha A2 coefficient");
+  messenger->DeclareMethod("165PrimaryAngularA1", &H11BReaction::Set165PrimaryAngularA1Command, "Set 165-keV primary alpha1 A1 coefficient (8Be 2+ channel; isotropic default)");
+  messenger->DeclareMethod("165PrimaryAngularA2", &H11BReaction::Set165PrimaryAngularA2Command, "Set 165-keV primary alpha1 A2 coefficient (8Be 2+ channel; isotropic default)");
+  messenger->DeclareMethod("165PrimaryAlpha0AngularA1", &H11BReaction::Set165PrimaryAlpha0AngularA1Command, "Set 165-keV primary alpha0 A1 coefficient (8Be g.s. channel; Becker 1987)");
+  messenger->DeclareMethod("165PrimaryAlpha0AngularA2", &H11BReaction::Set165PrimaryAlpha0AngularA2Command, "Set 165-keV primary alpha0 A2 coefficient (8Be g.s. channel; Becker 1987)");
 
   messenger->DeclareMethod("enable165Alpha1SecondaryAngularCorrelation", &H11BReaction::SetEnable165Alpha1SecondaryAngularCorrelationCommand, "Enable 165-keV alpha1 secondary A2/A4 angular correlation");
   messenger->DeclareMethod("165Alpha1SecondaryA2", &H11BReaction::Set165Alpha1SecondaryA2Command, "Set 165-keV alpha1 secondary A2 coefficient");

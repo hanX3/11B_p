@@ -65,6 +65,8 @@ public:
   void SetEnable165PrimaryAngularDistributionCommand(G4bool enabled);
   void Set165PrimaryAngularA1Command(G4double value);
   void Set165PrimaryAngularA2Command(G4double value);
+  void Set165PrimaryAlpha0AngularA1Command(G4double value);
+  void Set165PrimaryAlpha0AngularA2Command(G4double value);
   void SetEnable165Alpha1SecondaryAngularCorrelationCommand(G4bool enabled);
   void Set165Alpha1SecondaryA2Command(G4double value);
   void Set165Alpha1SecondaryA4Command(G4double value);

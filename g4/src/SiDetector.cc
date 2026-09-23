@@ -111,29 +111,34 @@ void SiDetector::PlaceAlShell(const G4Transform3D& transfrom_3d)
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::map<G4String, G4int> SiDetector::map_name_to_ring_id = {{"Si_Barrel", 1}, {"Si_BackwardAnnular", 2}};
+// ring_id 3 is the forward annular DSSD added to recover forward-emitted alphas.
+std::map<G4String, G4int> SiDetector::map_name_to_ring_id = {{"Si_Barrel", 1}, {"Si_BackwardAnnular", 2}, {"Si_ForwardAnnular", 3}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::map<G4int, G4String> SiDetector::map_ring_id_to_name = {{1, "Si_Barrel"}, {2, "Si_BackwardAnnular"}};
+std::map<G4int, G4String> SiDetector::map_ring_id_to_name = {{1, "Si_Barrel"}, {2, "Si_BackwardAnnular"}, {3, "Si_ForwardAnnular"}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::map<G4String, G4int> SiDetector::map_name_to_sectors = {{"Si_Barrel", 8}, {"Si_BackwardAnnular", 1}};
+std::map<G4String, G4int> SiDetector::map_name_to_sectors = {{"Si_Barrel", 8}, {"Si_BackwardAnnular", 1}, {"Si_ForwardAnnular", 1}};
 
 // 0: diameter
 // 1: length
-std::map<G4String, std::array<G4double, 2>> SiDetector::map_si_par = {{"Si_BackwardAnnular", {120., 0.5}}};
+std::map<G4String, std::array<G4double, 2>> SiDetector::map_si_par = {{"Si_BackwardAnnular", {120., 0.5}}, {"Si_ForwardAnnular", {120., 0.5}}};
 
 // 0: width in phi direction
 // 1: length along beam axis
 // 2: radial thickness
 std::map<G4String, std::array<G4double, 3>> SiDetector::map_si_box_par = {{"Si_Barrel", {45., 120., 0.5}}};
 
-std::map<G4String, G4double> SiDetector::map_si_inner_radius = {{"Si_BackwardAnnular", 8.}};
+std::map<G4String, G4double> SiDetector::map_si_inner_radius = {{"Si_BackwardAnnular", 8.}, {"Si_ForwardAnnular", 8.}};
 
 // 0: x
 // 1: y
 // 2: z
-std::map<G4String, std::array<G4double, 3>> SiDetector::map_placement_par = {{"Si_Barrel", {70., 0., TargetZPos / mm}}, {"Si_BackwardAnnular", {0., 0., TargetZPos / mm - 120.}}};
+// The annular z values below are documented defaults; the actual axial
+// placement of the two annular DSSDs is driven by SiArrayConfig
+// (forward/backward distance) inside SiArray::CalculatePlacement so the
+// distances can be scanned from a macro.
+std::map<G4String, std::array<G4double, 3>> SiDetector::map_placement_par = {{"Si_Barrel", {70., 0., TargetZPos / mm}}, {"Si_BackwardAnnular", {0., 0., TargetZPos / mm - 120.}}, {"Si_ForwardAnnular", {0., 0., TargetZPos / mm + 120.}}};
 
 // 0: r1_inner
 // 1: r1_outer
@@ -144,7 +149,7 @@ std::map<G4String, std::array<G4double, 3>> SiDetector::map_placement_par = {{"S
 std::map<G4String, std::array<G4double, 6>> SiDetector::map_al_par = {{"Si_BackwardAnnular", {61., 62., 8., 62., 0.5, 1.5}}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-std::map<G4String, std::array<G4double, 4>> SiDetector::map_color_par = {{"Si_Barrel", {0., 0., 1., 0.8}}, {"Si_BackwardAnnular", {0., 0.45, 1., 0.8}}};
+std::map<G4String, std::array<G4double, 4>> SiDetector::map_color_par = {{"Si_Barrel", {0., 0., 1., 0.8}}, {"Si_BackwardAnnular", {0., 0.45, 1., 0.8}}, {"Si_ForwardAnnular", {0., 1., 0.45, 0.8}}};
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 std::map<G4String, std::array<G4double, 4>> SiDetector::map_color_al_shell_par = {{"Si_BackwardAnnular", {0.8, 0., 1., 0.3}}};

@@ -213,6 +213,35 @@ merge_class event
 merge_class track
 merge_class step
 
+# ---------------------------------------------------------------------
+# Append a provenance record to data.log (next to HB.cc): which merged
+# ROOT file(s) this run produced, and the effective (non-comment) macro
+# commands used.
+# ---------------------------------------------------------------------
+LOG_FILE="${PROJECT_ROOT}/data.log"
+{
+  echo "======================================================================"
+  echo "run tag : ${TAG}   date : $(date '+%Y-%m-%d %H:%M:%S')   threads : ${THREADS}"
+  echo "--- merged output files ---"
+  merged_found=0
+  for cls in reaction event track step; do
+    mf="${DATA_DIR}/${cls}_merged_${TAG}.root"
+    if [[ -f "${mf}" ]]; then
+      echo "  ${mf}"
+      merged_found=1
+    fi
+  done
+  if [[ "${merged_found}" -eq 0 ]]; then
+    printf '  %s\n' "${NEW_ROOT_FILES[@]}"
+  fi
+  echo "--- effective macro commands ---"
+  if [[ -f "${MACRO_PATH}" ]]; then
+    grep -vE '^[[:space:]]*(#|$)' "${MACRO_PATH}" | sed 's/^/    /'
+  fi
+  echo ""
+} >> "${LOG_FILE}"
+echo "Provenance appended to ${LOG_FILE}"
+
 echo "============================================================"
 echo "Batch run complete"
 echo "============================================================"

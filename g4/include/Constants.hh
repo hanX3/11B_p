@@ -166,20 +166,38 @@ constexpr G4bool H11BUseFullCoulombPenetrabilityForAlpha8BeFirstBreakup = true;
 
 // Primary-alpha angular distribution for the 165-keV resonance first breakup
 //   12C*(16.11, 2+) -> alpha + 8Be.
-// Becker 1987 fits the low-energy alpha0/alpha1 primary angular distributions
-// with
-//   W(theta) = 1 + a1*P1(cos(theta)) + a2*P2(cos(theta)).
-// The code convention is theta relative to the incident proton beam axis in
-// the 12C center-of-mass frame. If Becker coefficients digitized from the
-// figures are defined relative to a reversed 11B beam axis, odd coefficients
-// must be sign-flipped before use: a1_code=-a1_becker, a2_code=a2_becker.
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-// IMPORTANT: the default remains isotropic until Becker Fig. 10/11 coefficients
-// are digitized and validated. When enabled from macro, the same A1/A2
-// coefficients are used for the sampled 165-keV primary alpha direction.
+// Fitted to W(theta) = 1 + a1*P1(cos theta) + a2*P2(cos theta), with theta the
+// alpha emission angle relative to the proton beam axis in the 12C c.m. frame.
+//
+// The alpha0 and alpha1 channels have DIFFERENT distributions and therefore
+// carry independent coefficients:
+//
+//   alpha0 (-> 8Be g.s. 0+): energy-dependent, arising from interference
+//     between the 2+ resonance and the non-resonant direct (p,alpha) process.
+//     A full description needs an R-matrix analysis (Barker 2002; see also
+//     Munch et al., EPJA 55, 165 (2019)).  For this single-energy simulation
+//     at the 162 keV (Ecm ~ 148 keV) resonance we adopt the fixed coefficients
+//     read from Becker et al., Z. Phys. A 327, 341 (1987), Fig. 10, 148 keV
+//     panel: a1 ~ 0.0, a2 ~ +0.6 (a2 = 0.6 +/- 0.15; Becker flags the 150 keV
+//     data as uncertain).  Sign convention: Becker analyses relative to the
+//     11B beam axis, so odd coefficients are sign-flipped for the proton-beam
+//     convention used here (a1_code = -a1_becker); a1 ~ 0 makes this moot.
+//
+//   alpha1 (-> 8Be 2+ excited): isotropic in the 12C c.m. frame.  Spraker
+//     et al., J. Fusion Energ. 31, 357 (2012), Table 1 give |a1|,|a2| <~ 0.05
+//     with errors consistent with zero at these energies (0.15 MeV point:
+//     a1 = 0.03 +/- 0.04, a2 = -0.01 +/- 0.05); the two integration methods
+//     agree to <=3%.  Hence a1 = a2 = 0.
+//
+// Enable is OFF by default so runs stay isotropic unless a macro turns it on;
+// the primary angular distribution is treated as an on/off sensitivity knob.
 constexpr G4bool H11BDefaultEnable165PrimaryAngularDistribution = false;
+// alpha1 channel (isotropic, Spraker 2012)
 constexpr G4double H11BDefault165PrimaryAngularA1 = 0.0;
 constexpr G4double H11BDefault165PrimaryAngularA2 = 0.0;
+// alpha0 channel (Becker 1987 Fig. 10, 148 keV; a2 = 0.6 +/- 0.15)
+constexpr G4double H11BDefault165PrimaryAlpha0AngularA1 = 0.0;
+constexpr G4double H11BDefault165PrimaryAlpha0AngularA2 = 0.6;
 
 // Exit-channel angular-correlation defaults.
 // These affect only the 8Be(2+) sequential branch, i.e. the alpha1 channel.

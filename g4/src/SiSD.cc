@@ -6,7 +6,8 @@
 #include "G4ios.hh"
 
 #include "SiDetector.hh"
-#include "SensitiveDetectorUtils.hh"
+#include "SiArrayConfig.hh"
+#include "DetectorChannel.hh"
 #include <cstring>
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -31,11 +32,9 @@ void SiSD::Initialize(G4HCofThisEvent* hce)
   }
   hce->AddHitsCollection(hc_id, hits_collection);
 
-  for (auto it = SiDetector::map_name_to_sectors.begin(); it != SiDetector::map_name_to_sectors.end(); it++) {
-    for (auto j = 0; j < it->second; j++) {
-      hits_collection->insert(new SiHit());
-    }
-  }
+  // Strip-segmented readout: hits are created lazily per fired (module, segment)
+  // pair inside ProcessHits, so start each event with an empty lookup table.
+  map_copyno_to_hit_index.clear();
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -45,38 +44,84 @@ G4bool SiSD::ProcessHits(G4Step* step, G4TouchableHistory*)
   G4double e = step->GetTotalEnergyDeposit();
   if (e == 0.) return false;
 
-  auto touchable = step->GetPreStepPoint()->GetTouchable();
+  auto pre_step_point = step->GetPreStepPoint();
+  auto touchable = pre_step_point->GetTouchable();
   auto physical = touchable->GetVolume();
-  auto copy_no = physical->GetCopyNo();
-  const auto channel = SensitiveDetectorUtils::ResolveChannel(physical->GetName(), copy_no, SiDetector::map_name_to_ring_id, SiDetector::map_name_to_sectors);
-  if (!channel || channel->hit_index >= static_cast<G4int>(hits_collection->GetSize())) return false;
 
-  /*
-  G4cout << "-----> physical name " << det_name << G4endl;
-  G4cout << "-----> hc_id " << hc_id << G4endl;
-  G4cout << "-----> in SiSD ProcessHits function copy_no " << copy_no << G4endl;
-  G4cout << "-----> in SiSD ProcessHits function ring_id " << ring_id << G4endl;
-  G4cout << "-----> in SiSD ProcessHits function sector_id " << sector_id << G4endl;
-  */
+  // Resolve the detector name from the "<name>_phy" physical volume.
+  const G4String physical_name = physical->GetName();
+  const G4String suffix = "_phy";
+  if (physical_name.size() <= suffix.size()) return false;
+  const auto suffix_position = physical_name.size() - suffix.size();
+  if (physical_name.compare(suffix_position, suffix.size(), suffix) != 0) return false;
+  const G4String detector_name = physical_name.substr(0, suffix_position);
 
-  // check if the first touch
-  auto hit = (*hits_collection)[channel->hit_index];
-  if (hit->GetRingId() < 0 || hit->GetSectorId() < 0) {
-    hit->SetRingId(channel->ring_id);
-    hit->SetSectorId(channel->sector_id);
-    hit->SetDetectorType(channel->detector_type > 0 ? channel->detector_type : static_cast<G4int>(DetectorType::Si));
-    hit->SetArrayId(channel->array_id);
-    hit->SetModuleId(channel->module_id);
-    hit->SetSegmentId(channel->segment_id);
-    hit->SetCopyNo(channel->copy_no);
+  if (SiDetector::map_name_to_ring_id.find(detector_name) == SiDetector::map_name_to_ring_id.end()) return false;
 
-    auto pre_step_point = step->GetPreStepPoint();
-    hit->SetPos(pre_step_point->GetPosition());
+  // Decode the module-level copy number (segment field is zero on the volume).
+  const G4int base_copy_no = physical->GetCopyNo();
+  const DetectorChannel base = DecodeDetectorCopyNo(base_copy_no);
+  if (base.module_id < 0) return false;
+
+  const G4int detector_type = base.detector_type > 0 ? base.detector_type : static_cast<G4int>(DetectorType::Si);
+  const G4int array_id = base.array_id;
+  const G4int ring_id = base.ring_id;
+  const G4int module_id = base.module_id;
+
+  // Global hit position and its module-local counterpart (method (b): a single
+  // sensitive module solid plus local-coordinate strip segmentation).
+  const G4ThreeVector world_pos = pre_step_point->GetPosition();
+  const G4ThreeVector local_pos = touchable->GetHistory()->GetTopTransform().TransformPoint(world_pos);
+
+  G4int segment_id = 0;
+  const auto box_it = SiDetector::map_si_box_par.find(detector_name);
+  if (box_it != SiDetector::map_si_box_par.end()) {
+    // Barrel module (G4Box): local x across width, local y along the beam axis.
+    const G4double half_x = box_it->second[0] / 2. * mm;
+    const G4double half_y = box_it->second[1] / 2. * mm;
+    segment_id = SiArrayConfig::BarrelSegmentId(local_pos.x(), local_pos.y(), half_x, half_y);
+  } else {
+    // Annular DSSD (G4Tubs): radial rings + angular sectors in the local x-y plane.
+    const auto tub_it = SiDetector::map_si_par.find(detector_name);
+    const G4double r_outer = tub_it != SiDetector::map_si_par.end() ? tub_it->second[0] / 2. * mm : 0.;
+    const auto inner_it = SiDetector::map_si_inner_radius.find(detector_name);
+    const G4double r_inner = inner_it != SiDetector::map_si_inner_radius.end() ? inner_it->second * mm : 0.;
+    segment_id = SiArrayConfig::AnnularSegmentId(local_pos.x(), local_pos.y(), r_inner, r_outer);
+  }
+
+  // Defensive clamp: the copy-number encoding reserves 3 decimal digits for the
+  // segment field, so keep segment ids in range even for extreme strip counts.
+  if (segment_id > kMaxSegmentId) segment_id = kMaxSegmentId;
+  if (segment_id < 0) segment_id = 0;
+
+  const G4int full_copy_no = EncodeDetectorCopyNo(static_cast<DetectorType>(detector_type), array_id, ring_id, module_id, segment_id);
+
+  // Find-or-create the hit for this (module, segment); each fired strip is an
+  // independent hit so that several segments of the same module can coincide.
+  SiHit* hit = nullptr;
+  auto found = map_copyno_to_hit_index.find(full_copy_no);
+  if (found == map_copyno_to_hit_index.end()) {
+    hit = new SiHit();
+    hits_collection->insert(hit);
+    map_copyno_to_hit_index[full_copy_no] = static_cast<G4int>(hits_collection->GetSize()) - 1;
+
+    hit->SetRingId(ring_id);
+    hit->SetSectorId(module_id);
+    hit->SetDetectorType(detector_type);
+    hit->SetArrayId(array_id);
+    hit->SetModuleId(module_id);
+    hit->SetSegmentId(segment_id);
+    hit->SetCopyNo(full_copy_no);
+
+    hit->SetPos(world_pos);
     hit->SetTime(pre_step_point->GetGlobalTime());
 
     auto track = step->GetTrack();
     hit->SetParticleInfo(track->GetDefinition()->GetPDGEncoding(), track->GetTrackID(), track->GetParentID());
+  } else {
+    hit = (*hits_collection)[found->second];
   }
+
   hit->AddEdep(e);
 
   return true;

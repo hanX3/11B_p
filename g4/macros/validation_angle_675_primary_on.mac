@@ -1,5 +1,0 @@
-/control/execute macros/validation_angle_common.mac
-/gun/energy 675 keV
-/h11b/enable675PrimaryAngularDistribution true
-/h11b/printConfig
-/run/beamOn 200000

@@ -15,6 +15,9 @@ public:
 
   virtual void GeneratePrimaries(G4Event*);
 
+  // Detector-commissioning forward alpha source (see SiArrayConfig); default off.
+  void GenerateForwardAlphaTestPrimary(G4Event*);
+
   G4ParticleGun* GetParticleGun()
   {
     return particle_gun;

@@ -14,6 +14,11 @@ void Set165PrimaryAngularA1(G4double value);
 void Set165PrimaryAngularA2(G4double value);
 G4double Get165PrimaryAngularA1();
 G4double Get165PrimaryAngularA2();
+// alpha0-channel primary coefficients (distinct from the alpha1 values above)
+void Set165PrimaryAlpha0AngularA1(G4double value);
+void Set165PrimaryAlpha0AngularA2(G4double value);
+G4double Get165PrimaryAlpha0AngularA1();
+G4double Get165PrimaryAlpha0AngularA2();
 std::pair<G4double, G4double> Get165PrimaryA1A2(G4bool alpha1_branch);
 
 G4bool GetEnable675PrimaryAngularDistribution();
