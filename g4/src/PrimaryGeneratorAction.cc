@@ -1,103 +1,55 @@
-//
-// ********************************************************************
-// * License and Disclaimer                                           *
-// *                                                                  *
-// * The  Geant4 software  is  copyright of the Copyright Holders  of *
-// * the Geant4 Collaboration.  It is provided  under  the terms  and *
-// * conditions of the Geant4 Software License,  included in the file *
-// * LICENSE and available at  http://cern.ch/geant4/license .  These *
-// * include a list of copyright holders.                             *
-// *                                                                  *
-// * Neither the authors of this software system, nor their employing *
-// * institutes,nor the agencies providing financial support for this *
-// * work  make  any representation or  warranty, express or implied, *
-// * regarding  this  software system or assume any liability for its *
-// * use.  Please see the license in the file  LICENSE  and URL above *
-// * for the full disclaimer and the limitation of liability.         *
-// *                                                                  *
-// * This  code  implementation is the result of  the  scientific and *
-// * technical work of the GEANT4 collaboration.                      *
-// * By using,  copying,  modifying or  distributing the software (or *
-// * any work based  on the software)  you  agree  to acknowledge its *
-// * use  in  resulting  scientific  publications,  and indicate your *
-// * acceptance of all terms of the Geant4 Software license.          *
-// ********************************************************************
-//
-//
-/// \file PrimaryGeneratorAction.cc
-/// \brief Implementation of the B2::PrimaryGeneratorAction class
-
 #include "PrimaryGeneratorAction.hh"
+#include "Constants.hh"
 
 #include "G4LogicalVolumeStore.hh"
 #include "G4LogicalVolume.hh"
 #include "G4Box.hh"
 #include "G4Event.hh"
 #include "G4ParticleGun.hh"
+#include "G4GeneralParticleSource.hh"
 #include "G4ParticleTable.hh"
 #include "G4ParticleDefinition.hh"
 #include "G4SystemOfUnits.hh"
+#include "G4RandomDirection.hh"
+#include "G4IonTable.hh"
+#include "G4Geantino.hh"
+#include "G4DynamicParticle.hh"
+
 #include "Randomize.hh"
+#include "TMatrixD.h"
 
-
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
+//
 PrimaryGeneratorAction::PrimaryGeneratorAction()
+: G4VUserPrimaryGeneratorAction()
 {
-  G4int nofParticles = 1;
-  fParticleGun = new G4ParticleGun(nofParticles);
+  G4int n_of_particles = 1;
+  particle_gun  = new G4ParticleGun(n_of_particles);
 
-  // default particle kinematic
+  G4ParticleDefinition *particle_definition = G4ParticleTable::GetParticleTable()->FindParticle("proton");
+  particle_gun->SetParticleDefinition(particle_definition);
 
-  G4ParticleDefinition* particleDefinition
-    = G4ParticleTable::GetParticleTable()->FindParticle("proton");
-    
-    if(!particleDefinition) G4cout<<"cannot find particleDefinition!"<<G4endl;
-    
-
-  fParticleGun->SetParticleDefinition(particleDefinition);
-  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
-  fParticleGun->SetParticleEnergy(165*keV);
+  SetBeamEnergy(BeamEnergy);
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
+//
 PrimaryGeneratorAction::~PrimaryGeneratorAction()
 {
-  delete fParticleGun;
+  delete particle_gun;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
+//
+void PrimaryGeneratorAction::GeneratePrimaries(G4Event* an_event)
 {
-  // This function is called at the begining of event
+  G4double r0 = BeamR*G4UniformRand();
+  G4double theta = (2.*CLHEP::pi)*G4UniformRand();
+  G4double x0 = r0*std::sin(theta);
+  G4double y0 = r0*std::cos(theta);
+  G4double z0 = 0.;
 
-  // In order to avoid dependence of PrimaryGeneratorAction
-  // on DetectorConstruction class we get world volume
-  // from G4LogicalVolumeStore.
+  particle_gun->SetParticlePosition(G4ThreeVector(x0, y0, z0));
+  particle_gun->SetParticleMomentumDirection(G4ThreeVector(0., 0., 1.));
+  //set energy
+  particle_gun->SetParticleEnergy(particle_energy);
 
-  G4double worldZHalfLength = 0;
-  G4LogicalVolume* worldLV
-    = G4LogicalVolumeStore::GetInstance()->GetVolume("World");
-  G4Box* worldBox = nullptr;
-  if ( worldLV ) worldBox = dynamic_cast<G4Box*>(worldLV->GetSolid());
-  if ( worldBox ) worldZHalfLength = worldBox->GetZHalfLength();
-  else  {
-    G4cerr << "World volume of box not found." << G4endl;
-    G4cerr << "Perhaps you have changed geometry." << G4endl;
-    G4cerr << "The gun will be place in the center." << G4endl;
-  }
-
-  // Note that this particular case of starting a primary particle on the world boundary
-  // requires shooting in a direction towards inside the world.
-  fParticleGun->SetParticlePosition(G4ThreeVector(0., 0., -worldZHalfLength));
-
-  fParticleGun->GeneratePrimaryVertex(anEvent);
+  particle_gun->GeneratePrimaryVertex(an_event);
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-
-

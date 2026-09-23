@@ -1,100 +1,134 @@
-//
-// ********************************************************************
-// * License and Disclaimer                                           *
-// *                                                                  *
-// * The  Geant4 software  is  copyright of the Copyright Holders  of *
-// * the Geant4 Collaboration.  It is provided  under  the terms  and *
-// * conditions of the Geant4 Software License,  included in the file *
-// * LICENSE and available at  http://cern.ch/geant4/license .  These *
-// * include a list of copyright holders.                             *
-// *                                                                  *
-// * Neither the authors of this software system, nor their employing *
-// * institutes,nor the agencies providing financial support for this *
-// * work  make  any representation or  warranty, express or implied, *
-// * regarding  this  software system or assume any liability for its *
-// * use.  Please see the license in the file  LICENSE  and URL above *
-// * for the full disclaimer and the limitation of liability.         *
-// *                                                                  *
-// * This  code  implementation is the result of  the  scientific and *
-// * technical work of the GEANT4 collaboration.                      *
-// * By using,  copying,  modifying or  distributing the software (or *
-// * any work based  on the software)  you  agree  to acknowledge its *
-// * use  in  resulting  scientific  publications,  and indicate your *
-// * acceptance of all terms of the Geant4 Software license.          *
-// ********************************************************************
-//
-//
-/// \file EventAction.cc
-/// \brief Implementation of the B2::EventAction class
-#include "G4AnalysisManager.hh"
 #include "EventAction.hh"
-#include "StripHit.hh"
-#include "StripSD.hh"
 
-#include "G4VHit.hh"
-#include "G4THitsCollection.hh"
 #include "G4Event.hh"
 #include "G4EventManager.hh"
 #include "G4TrajectoryContainer.hh"
 #include "G4Trajectory.hh"
 #include "G4ios.hh"
+#include "G4SDManager.hh"
+#include "G4RunManager.hh"
 
-#include "G4SystemOfUnits.hh"
+#include "SiSD.hh"
+#include "HPGeSD.hh"
+#include "LaBr3SD.hh"
+#include "RootIO.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+#include "TMath.h"
 
-EventAction::EventAction()
-{}
+//
+EventAction::EventAction(PrimaryGeneratorAction *pg, RootIO *rio)
+: G4UserEventAction(),
+  primary(pg),
+  root_io(rio)
+{
+  hc_id_si = -1;
+  threshold_si = SiEnergyThreshold;
+  energy_resolution_si = SiEnergyResolution;
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+  hc_id_hpge = -1;
+  threshold_hpge = SiEnergyThreshold;
+  energy_resolution_hpge = HPGeEnergyResolution;
 
+  hc_id_labr3 = -1;
+  threshold_labr3 = LaBr3EnergyThreshold;
+  energy_resolution_labr3 = LaBr3EnergyResolution;
+
+  event_data.Clear();
+}
+
+//
 EventAction::~EventAction()
 {}
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void EventAction::BeginOfEventAction(const G4Event* event)
+//
+void EventAction::BeginOfEventAction(const G4Event*)
 {
+  auto sd_manager = G4SDManager::GetSDMpointer();
+  hc_id_si = sd_manager->GetCollectionID("SiSD/SiHitCollection");
+  hc_id_hpge = sd_manager->GetCollectionID("HPGeSD/HPGeHitCollection");
+  hc_id_labr3 = sd_manager->GetCollectionID("LaBr3SD/LaBr3HitCollection");
 
-  G4int id = event->GetEventID();
- // G4cout << "Event " << id+1 << "\r" << std::flush;
+  // G4cout << "Collection IDs cached: " << hc_id_si << " " << hc_id_hpge << " " << hc_id_labr3 << G4endl;
+ }
 
-  return;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
+//
 void EventAction::EndOfEventAction(const G4Event* event)
 {
-  auto hc = event->GetHCofThisEvent()->GetHC(0);
-  G4int HitNb = hc -> GetSize();
-  if (HitNb>0){
-  G4int FireNb = 0;
-  G4double AllEnergy[5][31] = {0};
-  G4double FireTime = -1;
-  G4double eTemp = 0;
-  G4int Track = -1;
-  for (int i = 0;i<HitNb;i++)
-  { 
-      StripHit* Hit = static_cast<StripHit*>(hc -> GetHit(i));
-      FireNb = Hit -> GetStripNb();
-      eTemp = Hit -> GetEdep();
-      Track = Hit -> GetTrackID();
-      if(Track>0&& Track<5) AllEnergy[Track-1][FireNb] = AllEnergy[Track-1][FireNb] + eTemp;
-      else AllEnergy[4][FireNb] = AllEnergy[4][FireNb] + eTemp;
+  if((MASK&0b001)==0b001){
+    auto hce = event->GetHCofThisEvent();
+
+    // Si array, ring 1 sector 1
+    auto hc_si = static_cast<SiHitsCollection*>(hce->GetHC(hc_id_si));
+    for(auto i=0;i<hc_si->GetSize();i++){
+      event_data.event = event->GetEventID();
+      event_data.ring = (*hc_si)[i]->GetRingId();
+      event_data.sector = (*hc_si)[i]->GetSectorId();
+      event_data.e = (*hc_si)[i]->GetEdep();
+      event_data.x = (*hc_si)[i]->GetPos().x();
+      event_data.y = (*hc_si)[i]->GetPos().y();
+      event_data.z = (*hc_si)[i]->GetPos().z();
+      strcpy(event_data.detector, (*hc_si)[i]->GetDetectorName());
+
+      GausEnergy(energy_resolution_si);
+      if(IfThresholdTrigger(threshold_si)){
+        root_io->FillEventTree(event_data);
+      }
+    }
+
+    // HPGe array, ring 1,2,... sector 1,2,...
+    auto hc_hpge = static_cast<HPGeHitsCollection*>(hce->GetHC(hc_id_hpge));
+    for(auto i=0;i<hc_hpge->GetSize();i++){
+      event_data.event = event->GetEventID();
+      event_data.ring = (*hc_hpge)[i]->GetRingId();
+      event_data.sector = (*hc_hpge)[i]->GetSectorId();
+      event_data.e = (*hc_hpge)[i]->GetEdep();
+      event_data.x = (*hc_hpge)[i]->GetPos().x();
+      event_data.y = (*hc_hpge)[i]->GetPos().y();
+      event_data.z = (*hc_hpge)[i]->GetPos().z();
+      strcpy(event_data.detector, (*hc_hpge)[i]->GetDetectorName());
+
+      GausEnergy(energy_resolution_hpge);
+      if(IfThresholdTrigger(threshold_hpge)){
+        root_io->FillEventTree(event_data);
+      }
+    }
+
+    // LaBr3 array, ring 1,2,... sector 1,2,...
+    auto hc_labr3 = static_cast<LaBr3HitsCollection*>(hce->GetHC(hc_id_labr3));
+    for(auto i=0;i<hc_labr3->GetSize();i++){
+      event_data.event = event->GetEventID();
+      event_data.ring = (*hc_labr3)[i]->GetRingId();
+      event_data.sector = (*hc_labr3)[i]->GetSectorId();
+      event_data.e = (*hc_labr3)[i]->GetEdep();
+      event_data.x = (*hc_labr3)[i]->GetPos().x();
+      event_data.y = (*hc_labr3)[i]->GetPos().y();
+      event_data.z = (*hc_labr3)[i]->GetPos().z();
+      strcpy(event_data.detector, (*hc_labr3)[i]->GetDetectorName());
+
+      GausEnergy(energy_resolution_labr3);
+      if(IfThresholdTrigger(threshold_labr3)){
+        root_io->FillEventTree(event_data);
+      }
+    }
+
   }
-  auto analysisManager = G4AnalysisManager::Instance();
-  for(int i=0;i<5;i++)
-  for(int j=0;j<31;j++)
-  if (AllEnergy[i][j]>0){
-  analysisManager -> FillNtupleDColumn(0,0,AllEnergy[i][j]/MeV);
-  analysisManager -> FillNtupleDColumn(0,1,j);
-  analysisManager -> FillNtupleDColumn(0,2,i+1);
-  analysisManager -> AddNtupleRow(0);
-  }
+
+  // periodic printing
+  G4int event_id = event->GetEventID();
+  if ( event_id < 10 || event_id % 50000 == 0) {
+    G4cout << ">>> Event: " << event_id  << G4endl;
   }
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+//
+void EventAction::GausEnergy(G4double res)
+{
+  event_data.e = G4RandGauss::shoot(event_data.e, res*event_data.e/2.355);
+}
 
-
+//
+bool EventAction::IfThresholdTrigger(G4double threshold)
+{
+  if(event_data.e >= threshold) return true;
+  else return false;
+}

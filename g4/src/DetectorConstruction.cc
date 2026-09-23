@@ -1,47 +1,18 @@
-//
-// ********************************************************************
-// * License and Disclaimer                                           *
-// *                                                                  *
-// * The  Geant4 software  is  copyright of the Copyright Holders  of *
-// * the Geant4 Collaboration.  It is provided  under  the terms  and *
-// * conditions of the Geant4 Software License,  included in the file *
-// * LICENSE and available at  http://cern.ch/geant4/license .  These *
-// * include a list of copyright holders.                             *
-// *                                                                  *
-// * Neither the authors of this software system, nor their employing *
-// * institutes,nor the agencies providing financial support for this *
-// * work  make  any representation or  warranty, express or implied, *
-// * regarding  this  software system or assume any liability for its *
-// * use.  Please see the license in the file  LICENSE  and URL above *
-// * for the full disclaimer and the limitation of liability.         *
-// *                                                                  *
-// * This  code  implementation is the result of  the  scientific and *
-// * technical work of the GEANT4 collaboration.                      *
-// * By using,  copying,  modifying or  distributing the software (or *
-// * any work based  on the software)  you  agree  to acknowledge its *
-// * use  in  resulting  scientific  publications,  and indicate your *
-// * acceptance of all terms of the Geant4 Software license.          *
-// ********************************************************************
-//
-//
-/// \file DetectorConstruction.cc
-/// \brief Implementation of the B2a::DetectorConstruction class
-
 #include "DetectorConstruction.hh"
-#include "DetectorMessenger.hh"
-#include "StripSD.hh"
 
+#include "G4Isotope.hh"
 #include "G4Material.hh"
 #include "G4NistManager.hh"
 #include "G4SDManager.hh"
 
 #include "G4Box.hh"
 #include "G4Tubs.hh"
+#include "G4Polycone.hh"
+#include "G4UnionSolid.hh"
 #include "G4LogicalVolume.hh"
 #include "G4PVPlacement.hh"
 #include "G4GlobalMagFieldMessenger.hh"
 #include "G4AutoDelete.hh"
-#include "G4Element.hh"
 
 #include "G4GeometryTolerance.hh"
 #include "G4GeometryManager.hh"
@@ -52,237 +23,573 @@
 #include "G4Colour.hh"
 
 #include "G4SystemOfUnits.hh"
-#include "G4UserLimits.hh"
 
-#include "G4StepLimiterPhysics.hh"
+#include <string>
+#include "TString.h"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-
+//
 DetectorConstruction::DetectorConstruction()
 {
+  air_mat = nullptr;
+  vaccum_mat = nullptr;
+  al_mat = nullptr;
+  si_mat = nullptr;
+  stainless_steel_mat = NULL;
+  enriched_11b_mat = NULL;
+  natured_11b_high_density_mat = NULL;
+  natured_11b_low_density_mat = NULL;
+  borated_pe_mat = NULL;
+  hb_mat = NULL;
 
-  fLogicStrip = new G4LogicalVolume*[30];
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-DetectorConstruction::~DetectorConstruction()
-{
-  delete [] fLogicStrip;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-G4VPhysicalVolume* DetectorConstruction::Construct()
-{
-  // Define materials
   DefineMaterials();
 
-  // Define volumes
+  check_overlaps = true;
+
+  //
+  SetTargetThickness(TargetThickness);
+  SetTargetMaterial(TargetMaterial);
+
+  SetTargetBackingFlag(TargetBackingFlag);
+}
+
+//
+DetectorConstruction::~DetectorConstruction()
+{
+  delete step_limit;
+}
+
+//
+G4VPhysicalVolume *DetectorConstruction::Construct()
+{
   return DefineVolumes();
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
+//
 void DetectorConstruction::DefineMaterials()
 {
-  // Material definition
+  G4NistManager *nist_manager = G4NistManager::Instance();
 
-  G4NistManager* nistManager = G4NistManager::Instance();
+  air_mat = nist_manager->FindOrBuildMaterial("G4_AIR");
+  vaccum_mat = nist_manager->FindOrBuildMaterial("G4_Galactic");
+  al_mat = nist_manager->FindOrBuildMaterial("G4_Al");
+  si_mat = nist_manager->FindOrBuildMaterial("G4_Si");
+  stainless_steel_mat = nist_manager->FindOrBuildMaterial("G4_STAINLESS-STEEL");
 
-  // Air defined using NIST Manager
-  nistManager->FindOrBuildMaterial("G4_AIR");
+  // Enriched 11B
+  G4Isotope *b10 = new G4Isotope("B10", 5, 10, 10*g/mole);
+  G4Isotope *b11 = new G4Isotope("B11", 5, 11, 11*g/mole);
+  G4Element *enriched_b_el = new G4Element("Boron", "B", 2);
+  enriched_b_el->AddIsotope(b10, 0.01);
+  enriched_b_el->AddIsotope(b11, 0.99);
+  enriched_11b_mat = new G4Material("Enriched_B11", 2.38 *g/cm3, 1);
+  enriched_11b_mat->AddElement(enriched_b_el, 1);
 
-  // Lead defined using NIST Manager
-  //fTargetMaterial  = nistManager->FindOrBuildMaterial("G4_Pt");
+  G4Element *natured_b_el = new G4Element("Boron", "B", 2);
+  natured_b_el->AddIsotope(b10, 0.2);
+  natured_b_el->AddIsotope(b11, 0.8);
 
-  // Xenon gas defined using NIST Manager
- // G4Element *B = new G4Element("Boron","B",5,10.81*g/mole);
- // G4Material *B_M = new G4Material("B_M",2.37*g/cm3,1);
- // B_M -> AddElement(B,1);
-  fStripMaterial = nistManager->FindOrBuildMaterial("G4_Si");
-  //-----------------------------name--Z----A----
-  G4Isotope* B11 = new G4Isotope("B11",5 , 11, 11*g/mole);
-  G4Isotope* B10 = new G4Isotope("B10",5 , 10, 10*g/mole);
-  //-----------------------------------name-----symbol--ncomponets
-  G4Element* TargetEl = new G4Element("TargetEl", "B",    2);
-  TargetEl -> AddIsotope(B11,99*perCent);
-  TargetEl -> AddIsotope(B10,1*perCent);
-  //------------------------------------name---------density----ncomponets
-  fTargetMaterial= new G4Material("TargetB",  1.404*g/cm3,     1);
-  fTargetMaterial -> AddElement(TargetEl,1);
-  
-  
-  
-    // Print materials
+  // Natured 11B high density
+  natured_11b_high_density_mat = new G4Material("Natured_11B_high_density", 2.31 *g/cm3, 1);
+  natured_11b_high_density_mat->AddElement(natured_b_el, 1);
+
+  // Natured 11B low density
+  natured_11b_low_density_mat = new G4Material("Natured_11B_low_density", 1.4 *g/cm3, 1);
+  natured_11b_low_density_mat->AddElement(natured_b_el, 1);
+
+  // Borated polyethylene
+  borated_pe_mat = new G4Material("Borated_polyethylene", 1.13 *g/cm3, 3);
+  borated_pe_mat->AddElement(natured_b_el, 0.864);
+  borated_pe_mat->AddElement(nist_manager->FindOrBuildElement("C"), 0.116);
+  borated_pe_mat->AddElement(nist_manager->FindOrBuildElement("H"), 0.02);
+
+  // Hydrogen Borated
+  hb_mat = new G4Material("Hydrogen_Borated", 1.32 *g/cm3, 2);
+  hb_mat->AddElement(natured_b_el, 0.804);
+  hb_mat->AddElement(nist_manager->FindOrBuildElement("H"), 0.196);
+
+  // Print materials
   G4cout << *(G4Material::GetMaterialTable()) << G4endl;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
+//
 G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 {
-  G4NistManager* nistManager = G4NistManager::Instance();
-  G4Material* Nothing  = nistManager->FindOrBuildMaterial("G4_Galactic");
+  // define world
+  G4Box *world_solid = new G4Box("World", 0.5*WorldSizeX, 0.5*WorldSizeY, 0.5*WorldSizeZ);
+  world_log = new G4LogicalVolume(world_solid, air_mat, "World");
+  G4VPhysicalVolume *world_phys = new G4PVPlacement(0, G4ThreeVector(0.,0.,0.), world_log, "World", 0, false, 0, check_overlaps);
 
-  // Sizes of the principal geometrical components (solids)
-  G4double worldLength = 40*cm;
-  G4double targetThick =  0.239*um; // full length of Target
-  G4double targetLong =  20*mm;
-  G4double targetShort = 10*mm;
-  G4ThreeVector targetPos = G4ThreeVector(0,0,targetThick/2);
-
-  // Definitions of Solids, Logical Volumes, Physical Volumes
-
-  // World
-
-  G4Box* worldS
-    = new G4Box("world",                                    //its name
-                worldLength/2,worldLength/2,worldLength/2); //its size
-  G4LogicalVolume* worldLV
-    = new G4LogicalVolume(
-                 worldS,   //its solid
-                 Nothing,      //its material
-                 "World"); //its name
-
-  //  Must place the World Physical volume unrotated at (0,0,0).
-  //
-  G4VPhysicalVolume* worldPV
-    = new G4PVPlacement(
-                 0,               // no rotation
-                 G4ThreeVector(), // at (0,0,0)
-                 worldLV,         // its logical volume
-                 "World",         // its name
-                 0,               // its mother  volume
-                 false,           // no boolean operations
-                 0,               // copy number
-                 0); // checking overlaps
+  // Chamber
+  G4LogicalVolume *chamber_shell_log = GetChamberShellLog("ChamberShell");
+  G4LogicalVolume *chamber_body_log = GetChamberBodyLog("ChamberBody");
+  new G4PVPlacement(0, G4ThreeVector(0, 0, 0), chamber_shell_log, "ChamberShell", world_log, false, 0, check_overlaps);
+  new G4PVPlacement(0, G4ThreeVector(0, 0, 0), chamber_body_log, "ChamberBody", world_log, false, 0, check_overlaps);
 
   // Target
+  G4double z_target = TargetZPos;
+  G4LogicalVolume *target_log = GetTargetLog("Target");
+  new G4PVPlacement(0, G4ThreeVector(0, 0, z_target), target_log, "Target", chamber_body_log, false, 0, check_overlaps);
 
-  G4Box* targetS
-    = new G4Box("target",targetShort/2,targetLong/2,targetThick/2);
-   fLogicTarget
-    = new G4LogicalVolume(targetS, fTargetMaterial,"Target_LV",0,0,0);
-  new G4PVPlacement(0,               // no rotation
-                    targetPos,  // at (x,y,z)
-                    fLogicTarget,    // its logical volume
-                    "Target_PV",        // its name
-                    worldLV,         // its mother volume
-                    false,           // no boolean operations
-                    0,               // copy number
-                    0); // checking overlaps
-  // Tracker
-
-  // Visualization attributes
-
-  G4VisAttributes* boxVisAtt= new G4VisAttributes(G4Colour(1.0,1.0,1.0));
-  G4VisAttributes* chamberVisAtt = new G4VisAttributes(G4Colour(1.0,1.0,0.0));
-
-  worldLV      ->SetVisAttributes(boxVisAtt);
-  fLogicTarget ->SetVisAttributes(boxVisAtt);
+  //Target Backing
+  if(flag_target_backing){
+    G4double z_target_backing = z_target+TargetThickness/2.+TargetBackingThickness/2.;
+    G4LogicalVolume *target_backing_log = GetTargetBackingLog("TargetBacking");
+    new G4PVPlacement(0, G4ThreeVector(0, 0, z_target_backing), target_backing_log, "TargetBacking", chamber_body_log, false, 0, check_overlaps);
   
-  G4Tubs* BigSi
-        = new G4Tubs("BigSi", 0, 1.4*cm, 75*um, 0 ,360);
-        
-  G4LogicalVolume* BigSiLogic = new G4LogicalVolume(BigSi,fStripMaterial,"BigSi_LV",0,0,0);
-  auto rotation = new G4RotationMatrix();
- // rotation->rotateY(45*deg);
- rotation->rotateY(90*deg);
-  G4ThreeVector BigSiPos;
-  //BigSiPos = G4ThreeVector(1.414*5*cm,0,-1.414*5*cm);
-  BigSiPos = G4ThreeVector(4*cm,0,0);
-  new G4PVPlacement(rotation,
-                      BigSiPos,
-                      BigSiLogic,
-                      "BigSi_PV",
-                      worldLV,
-                      false,
-                      30,
-                      0);
+    G4Region *target_backing_reg = new G4Region("TargetBacking");
+    target_backing_reg->AddRootLogicalVolume(target_backing_log);
+  }
+  
+  // G4Region for Cut
+  G4Region *chamber_shell_reg = new G4Region("ChamberShell");
+  chamber_shell_reg->AddRootLogicalVolume(chamber_shell_log);
+  G4Region *target_reg = new G4Region("Target");
+  target_reg->AddRootLogicalVolume(target_log);
 
-  for (G4int copyNo=0; copyNo<30; copyNo++) {
+  // 
+  G4SDManager *sd_manager = G4SDManager::GetSDMpointer();
 
-      G4Box* strip
-        = new G4Box("Strip",1*mm,75*um,5*mm);
+  // Si Array
+  si_array = new SiArray(chamber_body_log);
+  si_array->Construct();
+  SiSD *si_sd = new SiSD("SiSD", "SiHitCollection");
+  sd_manager->AddNewDetector(si_sd);
+  si_array->MakeSensitive(si_sd);
 
-      fLogicStrip[copyNo] =
-              new G4LogicalVolume(strip,fStripMaterial,"Strip_LV",0,0,0);
+  // HPGe Array
+  hpge_array = new HPGeArray(world_log);
+  hpge_array->Construct();
+  HPGeSD *hpge_sd = new HPGeSD("HPGeSD", "HPGeHitCollection");
+  sd_manager->AddNewDetector(hpge_sd);
+  hpge_array->MakeSensitive(hpge_sd);
 
-      fLogicStrip[copyNo]->SetVisAttributes(chamberVisAtt);
-      G4ThreeVector stripPos;
-      if (copyNo<15)
-      stripPos = G4ThreeVector((15.75 - copyNo*2.25)*mm,40*mm,-5*mm);
-      if (copyNo>14)
-      stripPos = G4ThreeVector((15.75 - (copyNo-15)*2.25)*mm,-40*mm,-5*mm);
-      new G4PVPlacement(0,                            // no rotation
-                        stripPos, // at (x,y,z)
-                        fLogicStrip[copyNo],        // its logical volume
-                        "Strip_PV",                 // its name
-                        worldLV,                    // its mother  volume
-                        false,                        // no boolean operations
-                        copyNo,                       // copy number
-                        0);              // checking overlaps
+  // Labr3 Array
+  labr3_array = new LaBr3Array(world_log);
+  labr3_array->Construct();
+  LaBr3SD *labr3_sd = new LaBr3SD("LaBr3SD", "LaBr3HitCollection");
+  sd_manager->AddNewDetector(labr3_sd);
+  labr3_array->MakeSensitive(labr3_sd);
 
+
+  //
+  G4RegionStore *reg_store = G4RegionStore::GetInstance();
+  for(G4int i=0;i<reg_store->size();++i){
+    G4Region *reg = (*reg_store)[i];
+    G4cout << "G4Region for Cuts " << reg->GetName() << G4endl;
+
+    if(!reg->GetProductionCuts()){
+       G4ProductionCuts *cuts = new G4ProductionCuts();
+       cuts->SetProductionCut(1. *mm, "e-");
+       cuts->SetProductionCut(1. *mm, "e+");
+       reg->SetProductionCuts(cuts);
+     }
   }
 
-  // Example of User Limits
   //
-  // Below is an example of how to set tracking constraints in a given
-  // logical volume
-  //
-  // Sets a max step length in the tracker region, with G4StepLimiter
+  G4double max_step = StepMax4Proton;
+  step_limit = new G4UserLimits(max_step);
+  target_log->SetUserLimits(step_limit);
 
-  //G4double maxStep = 0.5*chamberWidth;
-  //fStepLimit = new G4UserLimits(maxStep);
-  //trackerLV->SetUserLimits(fStepLimit);
-
-  /// Set additional contraints on the track, with G4UserSpecialCuts
-  ///
-  /// G4double maxLength = 2*trackerLength, maxTime = 0.1*ns, minEkin = 10*MeV;
-  /// trackerLV->SetUserLimits(new G4UserLimits(maxStep,
-  ///                                           maxLength,
-  ///                                           maxTime,
-  ///                                           minEkin));
-
-  // Always return the physical world
-  
-  G4UserLimits* stepLimit = new G4UserLimits();
-  stepLimit ->SetMaxAllowedStep(10*nm);
- 
-  fLogicTarget -> SetUserLimits(stepLimit);
- 
-  return worldPV;
+  return world_phys;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void DetectorConstruction::ConstructSDandField()
+//
+G4LogicalVolume* DetectorConstruction::GetChamberShellLog(G4String name)
 {
-  // Sensitive detectors
+  G4cout << " --->: GetChamberLog, begin" << G4endl;
 
-  G4String trackerStripSDname = "/StripSD";
-  StripSD* aStripSD = new StripSD(trackerStripSDname,
-                                            "StripHitsCollection");
-  G4SDManager::GetSDMpointer()->AddNewDetector(aStripSD);
-  // Setting aTrackerSD to all logical volumes with the same name
-  // of "Chamber_LV".
-  SetSensitiveDetector("Strip_LV", aStripSD, true);
-  SetSensitiveDetector("BigSi_LV", aStripSD, true);
+  G4double x_outer = ChamberX;
+  G4double y_outer = ChamberY;
+  G4double z_outer = ChamberZ;
 
+  G4double x_inner = x_outer - 2.*ChamberThickness;
+  G4double y_inner = y_outer - 2.*ChamberThickness;
+  G4double z_inner = z_outer - 2.*ChamberThickness;
 
+  G4double thickness = ChamberThickness;
+  G4double flange_xr = FlangeXR;
+  G4double flange_yr = FlangeYR;
+  G4double flange_zr = FlangeZR;
 
-  // Create global magnetic field messenger.
-  // Uniform magnetic field is then created automatically if
-  // the field value is not zero.
- // G4ThreeVector fieldValue = G4ThreeVector();
- // fMagFieldMessenger = new G4GlobalMagFieldMessenger(fieldValue);
-  //fMagFieldMessenger->SetVerboseLevel(1);
+  G4double flange_xxr = FlangeXR + thickness/2.;
+  G4double flange_yyr = FlangeYR + thickness/2.;
+  G4double flange_zzr = FlangeZR + thickness/2.;
 
-  // Register the field messenger for deleting
- // G4AutoDelete::Register(fMagFieldMessenger);
+  G4double flange_xxr2 = FlangeXR2;
+  G4double flange_yyr2 = FlangeYR2;
+  G4double flange_zzr2 = FlangeZR2;
+
+  G4double flange_xxrh = FlangeXRH;
+  G4double flange_yyrh = FlangeXRH;
+  G4double flange_zzrh = FlangeXRH;
+
+  G4double rot_x_angle, rot_y_angle, rot_z_angle;
+
+  //
+  G4Box *outer_solid = new G4Box("outer_solid", x_outer/2., y_outer/2., z_outer/2.);
+  G4Box *inner_solid = new G4Box("inner_solid", x_inner/2., y_inner/2., z_inner/2.);
+  G4SubtractionSolid *step1_solid = new G4SubtractionSolid("step1_solid", outer_solid, inner_solid, G4Transform3D(G4RotationMatrix(), G4ThreeVector(0, 0, 0)));
+
+  // flange_x_solid
+  G4cout << " --->: flange_x_solid, begin" << G4endl;
+  G4Tubs *flange_x_solid = new G4Tubs("flange_x_solid", 0.*mm, flange_xr, thickness, 0. *deg, 360. *deg);
+
+  G4RotationMatrix *flange_x_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = 90. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_x_rot_matrix->rotateX(rot_x_angle);
+  flange_x_rot_matrix->rotateY(rot_y_angle);
+  flange_x_rot_matrix->rotateZ(rot_z_angle);
+  flange_x_rot_matrix->print(G4cout);
+
+  // 123.5 = (257-10)/2.
+  // 158.5 = 657/2. - 170
+  G4ThreeVector flange_x_pos = G4ThreeVector(123.5 *mm, 0. *mm, 158.5 *mm);
+  G4SubtractionSolid *step2_solid = new G4SubtractionSolid("step2_solid", step1_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+  flange_x_pos = G4ThreeVector(123.5 *mm, 0. *mm, -158.5 *mm);
+  G4SubtractionSolid *step3_solid = new G4SubtractionSolid("step3_solid", step2_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+  flange_x_pos = G4ThreeVector(-123.5 *mm, 0. *mm, 158.5 *mm);
+  G4SubtractionSolid *step4_solid = new G4SubtractionSolid("step4_solid", step3_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+  flange_x_pos = G4ThreeVector(-123.5 *mm, 0. *mm, -158.5 *mm);
+  G4SubtractionSolid *step5_solid = new G4SubtractionSolid("step5_solid", step4_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+
+  // flange_y_solid
+  G4cout << " --->: flange_y_solid, begin" << G4endl;
+  G4Tubs *flange_y_solid = new G4Tubs("flange_y_solid", 0.*mm, flange_yr, thickness, 0. *deg, 360. *deg);
+
+  G4RotationMatrix *flange_y_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 90. *deg;
+  rot_y_angle = 0. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_y_rot_matrix->rotateX(rot_x_angle);
+  flange_y_rot_matrix->rotateY(rot_y_angle);
+  flange_y_rot_matrix->rotateZ(rot_z_angle);
+  flange_y_rot_matrix->print(G4cout);
+
+  // 123.5 = (257-10)/2.
+  // 158.5 = 657/2. - 170
+  G4ThreeVector flange_y_pos = G4ThreeVector(0. *mm, 123.5 *mm, 158.5 *mm);
+  G4SubtractionSolid *step6_solid = new G4SubtractionSolid("step6_solid", step5_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+  flange_y_pos = G4ThreeVector(0. *mm, 123.5 *mm, -158.5 *mm);
+  G4SubtractionSolid *step7_solid = new G4SubtractionSolid("step7_solid", step6_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+  flange_y_pos = G4ThreeVector(0. *mm, -123.5 *mm, 158.5 *mm);
+  G4SubtractionSolid *step8_solid = new G4SubtractionSolid("step8_solid", step7_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+  flange_y_pos = G4ThreeVector(0. *mm, -123.5 *mm, -158.5 *mm);
+  G4SubtractionSolid *step9_solid = new G4SubtractionSolid("step9_solid", step8_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+
+  // flange_z_solid
+  G4cout << " --->: flange_z_solid, begin" << G4endl;
+  G4Tubs *flange_z_solid = new G4Tubs("flange_z_solid", 0.*mm, flange_zr, thickness, 0. *deg, 360. *deg);
+
+  G4RotationMatrix *flange_z_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = 0. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_z_rot_matrix->rotateX(rot_x_angle);
+  flange_z_rot_matrix->rotateY(rot_y_angle);
+  flange_z_rot_matrix->rotateZ(rot_z_angle);
+  flange_z_rot_matrix->print(G4cout);
+
+  // 323.5 = (657-10)/2.
+  G4ThreeVector flange_z_pos = G4ThreeVector(0. *mm, 0. *mm, 323.5 *mm);
+  G4SubtractionSolid *step10_solid = new G4SubtractionSolid("step10_solid", step9_solid, flange_z_solid, G4Transform3D(*flange_z_rot_matrix, flange_z_pos));
+  flange_z_pos = G4ThreeVector(0. *mm, 0. *mm, -323.5 *mm);
+  G4SubtractionSolid *step11_solid = new G4SubtractionSolid("step11_solid", step10_solid, flange_z_solid, G4Transform3D(*flange_z_rot_matrix, flange_z_pos));
+
+  // flange_xx_solid
+  G4cout << " --->: flange_xx_solid, begin" << G4endl;
+
+  G4double xx_z_plane[6] = {-5., flange_xxrh, flange_xxrh, flange_xxrh+flange_xxrh-thickness, flange_xxrh+flange_xxrh-thickness, flange_xxrh+flange_xxrh};
+  G4double xx_r_inner_plane[6] = {flange_xr, flange_xr, flange_xr, flange_xr, 0, 0};
+  G4double xx_r_outer_plane[6] = {flange_xxr, flange_xxr, flange_xxr2, flange_xxr2, flange_xxr2, flange_xxr2};
+  
+  G4Polycone *flange_xx_solid = new G4Polycone("flange_xx_solid", 0. *deg, 360. *deg, 6, xx_z_plane, xx_r_inner_plane, xx_r_outer_plane);
+
+  G4RotationMatrix *flange_xx_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = 90. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_xx_rot_matrix->rotateX(rot_x_angle);
+  flange_xx_rot_matrix->rotateY(rot_y_angle);
+  flange_xx_rot_matrix->rotateZ(rot_z_angle);
+  flange_xx_rot_matrix->print(G4cout);
+
+  // 128.5 = 257/2.
+  // 158.5 = 657/2. - 170
+  G4ThreeVector flange_xx_pos = G4ThreeVector(128.5 *mm, 0. *mm, 158.5 *mm);
+  G4UnionSolid *step12_solid = new G4UnionSolid("step12_solid", step11_solid, flange_xx_solid, G4Transform3D(*flange_xx_rot_matrix, flange_xx_pos));
+  flange_xx_pos = G4ThreeVector(128.5 *mm, 0. *mm, -158.5 *mm);
+  G4UnionSolid *step13_solid = new G4UnionSolid("step13_solid", step12_solid, flange_xx_solid, G4Transform3D(*flange_xx_rot_matrix, flange_xx_pos));
+
+  flange_xx_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = -90. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_xx_rot_matrix->rotateX(rot_x_angle);
+  flange_xx_rot_matrix->rotateY(rot_y_angle);
+  flange_xx_rot_matrix->rotateZ(rot_z_angle);
+  flange_xx_rot_matrix->print(G4cout);
+  flange_xx_pos = G4ThreeVector(-128.5 *mm, 0. *mm, -158.5 *mm);
+  G4UnionSolid *step14_solid = new G4UnionSolid("step14_solid", step13_solid, flange_xx_solid, G4Transform3D(*flange_xx_rot_matrix, flange_xx_pos));
+  flange_xx_pos = G4ThreeVector(-128.5 *mm, 0. *mm, 158.5 *mm);
+  G4UnionSolid *step15_solid = new G4UnionSolid("step15_solid", step14_solid, flange_xx_solid, G4Transform3D(*flange_xx_rot_matrix, flange_xx_pos));
+
+  // flange_yy_solid
+  G4cout << " --->: flange_yy_solid, begin" << G4endl;
+
+  G4double yy_z_plane[6] = {-5., flange_yyrh, flange_yyrh, flange_yyrh+flange_yyrh-thickness, flange_yyrh+flange_yyrh-thickness, flange_yyrh+flange_yyrh};
+  G4double yy_r_inner_plane[6] = {flange_yr, flange_yr, flange_yr, flange_yr, 0, 0};
+  G4double yy_r_outer_plane[6] = {flange_yyr, flange_yyr, flange_yyr2, flange_yyr2, flange_yyr2, flange_yyr2};
+  
+  G4Polycone *flange_yy_solid = new G4Polycone("flange_yy_solid", 0. *deg, 360. *deg, 6, yy_z_plane, yy_r_inner_plane, yy_r_outer_plane);
+
+  G4RotationMatrix *flange_yy_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = -90. *deg;
+  rot_y_angle = 0. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_yy_rot_matrix->rotateX(rot_x_angle);
+  flange_yy_rot_matrix->rotateY(rot_y_angle);
+  flange_yy_rot_matrix->rotateZ(rot_z_angle);
+  flange_yy_rot_matrix->print(G4cout);
+
+  // 128.5 = 257/2.
+  // 158.5 = 657/2. - 170
+  G4ThreeVector flange_yy_pos = G4ThreeVector(0. *mm, 128.5 *mm, 158.5 *mm);
+  G4UnionSolid *step16_solid = new G4UnionSolid("step16_solid", step15_solid, flange_yy_solid, G4Transform3D(*flange_yy_rot_matrix, flange_yy_pos));
+  flange_yy_pos = G4ThreeVector(0. *mm, 128.5 *mm, -158.5 *mm);
+  G4UnionSolid *step17_solid = new G4UnionSolid("step17_solid", step16_solid, flange_yy_solid, G4Transform3D(*flange_yy_rot_matrix, flange_yy_pos));
+
+  flange_yy_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 90. *deg;
+  rot_y_angle = 0. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_yy_rot_matrix->rotateX(rot_x_angle);
+  flange_yy_rot_matrix->rotateY(rot_y_angle);
+  flange_yy_rot_matrix->rotateZ(rot_z_angle);
+  flange_yy_rot_matrix->print(G4cout);
+  flange_yy_pos = G4ThreeVector(0. *mm, -128.5 *mm, -158.5 *mm);
+  G4UnionSolid *step18_solid = new G4UnionSolid("step18_solid", step17_solid, flange_yy_solid, G4Transform3D(*flange_yy_rot_matrix, flange_yy_pos));
+  flange_yy_pos = G4ThreeVector(0. *mm, -128.5 *mm, 158.5 *mm);
+  G4UnionSolid *step19_solid = new G4UnionSolid("step19_solid", step18_solid, flange_yy_solid, G4Transform3D(*flange_yy_rot_matrix, flange_yy_pos));
+
+  // flange_zz_solid
+  G4cout << " --->: flange_zz_solid, begin" << G4endl;
+
+  G4double zz_z_plane[6] = {-5., flange_zzrh, flange_zzrh, flange_zzrh+flange_zzrh-thickness, flange_zzrh+flange_zzrh-thickness, flange_zzrh+flange_zzrh};
+  G4double zz_r_inner_plane[6] = {flange_zr, flange_zr, flange_zr, flange_zr, 0, 0};
+  G4double zz_r_outer_plane[6] = {flange_zzr, flange_zzr, flange_zzr2, flange_zzr2, flange_zzr2, flange_zzr2};
+  G4cout << " --->: flange_zz_solid, begin" << G4endl;
+  
+  G4Polycone *flange_zz_solid = new G4Polycone("flange_zz_solid", 0. *deg, 360. *deg, 6, zz_z_plane, zz_r_inner_plane, zz_r_outer_plane);
+
+  G4RotationMatrix *flange_zz_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = 0. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_zz_rot_matrix->rotateX(rot_x_angle);
+  flange_zz_rot_matrix->rotateY(rot_y_angle);
+  flange_zz_rot_matrix->rotateZ(rot_z_angle);
+  flange_zz_rot_matrix->print(G4cout);
+
+  // 328.5 = 657/2.
+  G4ThreeVector flange_zz_pos = G4ThreeVector(0. *mm, 0. *mm, 328.5 *mm);
+  G4UnionSolid *step20_solid = new G4UnionSolid("step20_solid", step19_solid, flange_zz_solid, G4Transform3D(*flange_zz_rot_matrix, flange_zz_pos));
+
+  flange_zz_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = 180. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_zz_rot_matrix->rotateX(rot_x_angle);
+  flange_zz_rot_matrix->rotateY(rot_y_angle);
+  flange_zz_rot_matrix->rotateZ(rot_z_angle);
+  flange_zz_rot_matrix->print(G4cout);
+  flange_zz_pos = G4ThreeVector(0. *mm, 0. *mm, -328.5 *mm);
+  G4UnionSolid *step21_solid = new G4UnionSolid("step21_solid", step20_solid, flange_zz_solid, G4Transform3D(*flange_zz_rot_matrix, flange_zz_pos));
+
+  TString log_name = TString::Format("%s_log", name.c_str());
+  G4LogicalVolume *log = new G4LogicalVolume(step21_solid, stainless_steel_mat, log_name.Data());
+
+  // color
+  G4VisAttributes *vis_att = new G4VisAttributes(G4Colour(0.3, 0.4, 0.5, 0.8));
+  vis_att->SetForceSolid(true);
+  log->SetVisAttributes(vis_att);
+
+  return log;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+//
+G4LogicalVolume* DetectorConstruction::GetChamberBodyLog(G4String name)
+{
+  G4cout << " --->: GetChamberBodyLog, begin" << G4endl;
 
+  G4double x = ChamberX - 2.*ChamberThickness;
+  G4double y = ChamberY - 2.*ChamberThickness;
+  G4double z = ChamberZ - 2.*ChamberThickness;
+
+  G4double x_thickness = ChamberThickness + 2.*FlangeXRH;
+  G4double y_thickness = ChamberThickness + 2.*FlangeYRH;
+  G4double z_thickness = ChamberThickness + 2.*FlangeZRH;
+  G4double flange_xr = FlangeXR;
+  G4double flange_yr = FlangeYR;
+  G4double flange_zr = FlangeZR;
+
+  G4double rot_x_angle, rot_y_angle, rot_z_angle;
+
+  //
+  G4Box *step1_solid = new G4Box("step1_solid", x/2., y/2., z/2.);
+
+  // flange_x_solid
+  G4cout << " --->: flange_x_solid, begin" << G4endl;
+  G4Tubs *flange_x_solid = new G4Tubs("flange_x_solid", 0.*mm, flange_xr, x_thickness, 0. *deg, 360. *deg);
+
+  G4RotationMatrix *flange_x_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = 90. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_x_rot_matrix->rotateX(rot_x_angle);
+  flange_x_rot_matrix->rotateY(rot_y_angle);
+  flange_x_rot_matrix->rotateZ(rot_z_angle);
+  flange_x_rot_matrix->print(G4cout);
+
+  // 103.5 = (257-10)/2. - 10 - 10
+  // 158.5 = 657/2. - 170
+  G4ThreeVector flange_x_pos = G4ThreeVector(103.5 *mm, 0. *mm, 158.5 *mm);
+  G4UnionSolid *step2_solid = new G4UnionSolid("step2_solid", step1_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+  flange_x_pos = G4ThreeVector(103.5 *mm, 0. *mm, -158.5 *mm);
+  G4UnionSolid *step3_solid = new G4UnionSolid("step3_solid", step2_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+  flange_x_pos = G4ThreeVector(-103.5 *mm, 0. *mm, 158.5 *mm);
+  G4UnionSolid *step4_solid = new G4UnionSolid("step4_solid", step3_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+  flange_x_pos = G4ThreeVector(-103.5 *mm, 0. *mm, -158.5 *mm);
+  G4UnionSolid *step5_solid = new G4UnionSolid("step5_solid", step4_solid, flange_x_solid, G4Transform3D(*flange_x_rot_matrix, flange_x_pos));
+
+  // flange_y_solid
+  G4cout << " --->: flange_y_solid, begin" << G4endl;
+  G4Tubs *flange_y_solid = new G4Tubs("flange_y_solid", 0.*mm, flange_yr, y_thickness, 0. *deg, 360. *deg);
+
+  G4RotationMatrix *flange_y_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 90. *deg;
+  rot_y_angle = 0. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_y_rot_matrix->rotateX(rot_x_angle);
+  flange_y_rot_matrix->rotateY(rot_y_angle);
+  flange_y_rot_matrix->rotateZ(rot_z_angle);
+  flange_y_rot_matrix->print(G4cout);
+
+  // 103.5 = (257-10)/2. -10. - 10.
+  // 158.5 = 657/2. - 170
+  G4ThreeVector flange_y_pos = G4ThreeVector(0. *mm, 103.5 *mm, 158.5 *mm);
+  G4UnionSolid *step6_solid = new G4UnionSolid("step6_solid", step5_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+  flange_y_pos = G4ThreeVector(0. *mm, 103.5 *mm, -158.5 *mm);
+  G4UnionSolid *step7_solid = new G4UnionSolid("step7_solid", step6_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+  flange_y_pos = G4ThreeVector(0. *mm, -103.5 *mm, 158.5 *mm);
+  G4UnionSolid *step8_solid = new G4UnionSolid("step8_solid", step7_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+  flange_y_pos = G4ThreeVector(0. *mm, -103.5 *mm, -158.5 *mm);
+  G4UnionSolid *step9_solid = new G4UnionSolid("step9_solid", step8_solid, flange_y_solid, G4Transform3D(*flange_y_rot_matrix, flange_y_pos));
+
+  // flange_z_solid
+  G4cout << " --->: flange_z_solid, begin" << G4endl;
+  G4Tubs *flange_z_solid = new G4Tubs("flange_z_solid", 0.*mm, flange_zr, z_thickness, 0. *deg, 360. *deg);
+
+  G4RotationMatrix *flange_z_rot_matrix = new G4RotationMatrix();
+  rot_x_angle = 0. *deg;
+  rot_y_angle = 0. *deg;
+  rot_z_angle = 0. *deg;
+  G4cout << "x angle " << rot_x_angle << "y angle " << rot_y_angle << " z angle " << rot_z_angle << G4endl;
+  flange_z_rot_matrix->rotateX(rot_x_angle);
+  flange_z_rot_matrix->rotateY(rot_y_angle);
+  flange_z_rot_matrix->rotateZ(rot_z_angle);
+  flange_z_rot_matrix->print(G4cout);
+
+  // 303.5 = (657-10)/2. - 10. - 10.
+  G4ThreeVector flange_z_pos = G4ThreeVector(0. *mm, 0. *mm, 303.5 *mm);
+  G4UnionSolid *step10_solid = new G4UnionSolid("step10_solid", step9_solid, flange_z_solid, G4Transform3D(*flange_z_rot_matrix, flange_z_pos));
+  flange_z_pos = G4ThreeVector(0. *mm, 0. *mm, -303.5 *mm);
+  G4UnionSolid *step11_solid = new G4UnionSolid("step11_solid", step10_solid, flange_z_solid, G4Transform3D(*flange_z_rot_matrix, flange_z_pos));
+
+  TString log_name = TString::Format("%s_log", name.c_str());
+  G4LogicalVolume *log = new G4LogicalVolume(step11_solid, vaccum_mat, log_name.Data());
+
+  // color
+  G4VisAttributes *vis_att = new G4VisAttributes(G4Colour(0.5, 0.4, 0.3, 0.6));
+  vis_att->SetForceSolid(true);
+  log->SetVisAttributes(vis_att);
+
+  return log;
+}
+
+//
+G4LogicalVolume* DetectorConstruction::GetTargetLog(G4String name)
+{
+  G4cout << " --->: GetTargetLog, begin" << G4endl;
+
+  G4double r = TargetR;
+
+  G4Tubs *solid = new G4Tubs("solid", 0.*mm, r, target_thickness/2., 0. *deg, 360. *deg);
+
+  TString log_name = TString::Format("%s_log", name.c_str());
+  G4LogicalVolume *log = new G4LogicalVolume(solid, target_mat, log_name.Data());
+
+  // color
+  G4VisAttributes *vis_att = new G4VisAttributes(G4Colour(0.5, 0.6, 0.3, 0.8));
+  vis_att->SetForceSolid(true);
+  log->SetVisAttributes(vis_att);
+
+  return log;
+}
+
+//
+G4LogicalVolume* DetectorConstruction::GetTargetBackingLog(G4String name)
+{
+  G4cout << " --->: GetTargetBackingLog, begin" << G4endl;
+
+  G4double r = TargetBackingR;
+  G4double thickness = TargetBackingThickness;
+
+  G4Tubs *solid = new G4Tubs("solid", 0.*mm, r, thickness/2., 0. *deg, 360. *deg);
+
+  TString log_name = TString::Format("%s_log", name.c_str());
+  G4LogicalVolume *log = new G4LogicalVolume(solid, si_mat, log_name.Data());
+
+  // color
+  G4VisAttributes *vis_att = new G4VisAttributes(G4Colour(0.8, 0.8, 0.3, 0.6));
+  vis_att->SetForceSolid(true);
+  log->SetVisAttributes(vis_att);
+
+  return log;
+}
+
+//
+void DetectorConstruction::SetMaxStep(G4double max_step)
+{
+  if ((step_limit)&&(max_step>0.)) step_limit->SetMaxAllowedStep(max_step);
+}
+
+//
+void DetectorConstruction::SetCheckOverlaps(G4bool co)
+{
+  check_overlaps = co;
+}
+
+//
+void DetectorConstruction::SetTargetMaterial(G4String str)
+{
+  G4Material *mat = G4Material::GetMaterial(str);
+  if(!mat){
+    G4cout << "cannot find " << str << " material " << G4endl;
+    return;
+  }
+
+  target_mat = mat;
+}

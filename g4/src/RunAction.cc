@@ -1,97 +1,92 @@
-//
-// ********************************************************************
-// * License and Disclaimer                                           *
-// *                                                                  *
-// * The  Geant4 software  is  copyright of the Copyright Holders  of *
-// * the Geant4 Collaboration.  It is provided  under  the terms  and *
-// * conditions of the Geant4 Software License,  included in the file *
-// * LICENSE and available at  http://cern.ch/geant4/license .  These *
-// * include a list of copyright holders.                             *
-// *                                                                  *
-// * Neither the authors of this software system, nor their employing *
-// * institutes,nor the agencies providing financial support for this *
-// * work  make  any representation or  warranty, express or implied, *
-// * regarding  this  software system or assume any liability for its *
-// * use.  Please see the license in the file  LICENSE  and URL above *
-// * for the full disclaimer and the limitation of liability.         *
-// *                                                                  *
-// * This  code  implementation is the result of  the  scientific and *
-// * technical work of the GEANT4 collaboration.                      *
-// * By using,  copying,  modifying or  distributing the software (or *
-// * any work based  on the software)  you  agree  to acknowledge its *
-// * use  in  resulting  scientific  publications,  and indicate your *
-// * acceptance of all terms of the Geant4 Software license.          *
-// ********************************************************************
-//
-//
-/// \file RunAction.cc
-/// \brief Implementation of the B2::RunAction class
-
 #include "RunAction.hh"
-#include "G4AnalysisManager.hh"
+#include "RootIO.hh"
+#include "PrimaryGeneratorAction.hh"
+
 #include "G4Run.hh"
 #include "G4RunManager.hh"
+#include "G4ios.hh"
+#include "G4Timer.hh"
+#include "G4UnitsTable.hh"
+#include "G4ParticleGun.hh"
+#include "unistd.h"
+#include <fstream>
+#include <string>
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-RunAction::RunAction()
+//
+RunAction::RunAction(RootIO *r_io)
+: G4UserRunAction(),
+  root_io(r_io)
 {
-  // set printing event number per each 100 events
+  // set printing event number per each 100000 events
   G4RunManager::GetRunManager()->SetPrintProgress(100000);
-  auto analysisManager = G4AnalysisManager::Instance();
-  analysisManager -> SetVerboseLevel(1);
-  analysisManager -> CreateNtuple("HB","Energy CopyNb TrackID");
-  analysisManager -> CreateNtupleDColumn(0,"Energy");
-  analysisManager -> CreateNtupleDColumn(0,"CopyNb");
-  analysisManager -> CreateNtupleDColumn(0,"TrackID");
-  analysisManager -> FinishNtuple(0);
-  analysisManager -> CreateNtuple("AllReaction","E1 theta1 phi1 E2 theta2 phi2 E3 theta3 phi3 ExBe");
-  analysisManager -> CreateNtupleDColumn(1,"E1");
-  analysisManager -> CreateNtupleDColumn(1,"theta1");
-  analysisManager -> CreateNtupleDColumn(1,"phi1");
 
-  analysisManager -> CreateNtupleDColumn(1,"E2");
-  analysisManager -> CreateNtupleDColumn(1,"theta2");
-  analysisManager -> CreateNtupleDColumn(1,"phi2");
-
-  analysisManager -> CreateNtupleDColumn(1,"E3");
-  analysisManager -> CreateNtupleDColumn(1,"theta3");
-  analysisManager -> CreateNtupleDColumn(1,"phi3");
-  
-  analysisManager -> CreateNtupleDColumn(1,"EBe");
-  analysisManager -> CreateNtupleDColumn(1,"thetaBe");
-  analysisManager -> CreateNtupleDColumn(1,"phiBe");
-  
-  analysisManager -> CreateNtupleDColumn(1,"ExBe");
-
-  analysisManager -> FinishNtuple(1);
+  timer = new G4Timer();
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
+//
 RunAction::~RunAction()
-{}
+{
+  delete timer;
+  timer = NULL;
+}
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void RunAction::BeginOfRunAction(const G4Run*)
+//
+void RunAction::BeginOfRunAction(const G4Run* run)
 {
   //inform the runManager to save random number seed
   G4RunManager::GetRunManager()->SetRandomNumberStore(false);
-  auto analysisManager = G4AnalysisManager::Instance();
-  G4String fileName = "../data/HBresult.root";
-  analysisManager -> OpenFile(fileName);
+
+  root_io->OpenReactionFile();
+  G4cout << "open reaction root file " << G4endl;
+
+  if((MASK&0b001)==0b001){
+    root_io->OpenEventFile();
+    G4cout << "open event root file " << G4endl;
+  }
+  if((MASK&0b010)==0b010){
+    root_io->OpenTrackFile();
+    G4cout << "open track root file " << G4endl;
+  }
+  if((MASK&0b100)==0b100){
+    root_io->OpenStepFile();
+    G4cout << "open step root file " << G4endl;
+  }
+
+  int run_id = run->GetRunID();
+  timer->Start();
+  G4cout << "======================   RunID = " << run_id << "  ======================" << G4endl;
+
+  G4cout << "1 energy " << G4endl;
+  G4cout << "2 track id " << G4endl;
+  G4cout << "3 particle name " << G4endl;
+  G4cout << "4 pre postion " << G4endl;
+  G4cout << "5 post postion " << G4endl;
+  G4cout << "6 detector name " << G4endl;
+  G4cout << "7 step length " << G4endl;
+  G4cout << "8 delat postion " << G4endl;
+  G4cout << "9 delat time " << G4endl;
+  G4cout << "10 delat energy " << G4endl;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void RunAction::EndOfRunAction(const G4Run* )
+//
+void RunAction::EndOfRunAction(const G4Run* run)
 {
-auto analysisManager = G4AnalysisManager::Instance();
-   analysisManager -> Write();
-   analysisManager -> CloseFile();
+  root_io->CloseReactionFile();
+
+  if((MASK&0b001)==0b001){
+    root_io->CloseEventFile();
+  }
+  if((MASK&0b010)==0b010){
+    root_io->CloseTrackFile();
+  }
+  if((MASK&0b100)==0b100){
+    root_io->CloseStepFile();
+  }
+
+  // Print results
+  G4cout << "  The run was " << run->GetNumberOfEvent() << " events " << G4endl;
+
+  timer->Stop();
+  G4cout << " time:  " << *timer << G4endl;
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 

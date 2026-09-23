@@ -38,11 +38,10 @@ add_executable(HB HB.cc ${sources} ${headers})
 target_link_libraries(HB ${Geant4_LIBRARIES} ${ROOT_LIBRARIES})
 
 set(HB_SCRIPTS
-  macro/gui.mac
-  macro/run1.mac
-  macro/run2.mac
-  macro/init_vis.mac
-  macro/vis.mac
+  macros/gui.mac
+  macros/vis.mac
+  macros/init_vis.mac
+  macros/run.mac
   )
 
 foreach(_script ${HB_SCRIPTS})

@@ -1,26 +1,20 @@
+// copy froam extended/radioactivedecay/rdecay02
+
 #ifndef PhysicsList_h
 #define PhysicsList_h 1
 
 #include "G4VModularPhysicsList.hh"
+#include "globals.hh"
 
-/// Modular physics list
-///
-/// It includes the folowing physics builders
-/// - G4DecayPhysics
-/// - G4RadioactiveDecayPhysics
-/// - G4EmStandardPhysics
-
+//
 class PhysicsList: public G4VModularPhysicsList
 {
 public:
   PhysicsList();
-  virtual ~PhysicsList();
+  ~PhysicsList() override = default;
 
-  virtual void SetCuts();  
-  void AddStepMax();
+public:
+  virtual void SetCuts();
 };
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 #endif
-

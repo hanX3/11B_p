@@ -1,53 +1,47 @@
-//
-// ********************************************************************
-// * License and Disclaimer                                           *
-// *                                                                  *
-// * The  Geant4 software  is  copyright of the Copyright Holders  of *
-// * the Geant4 Collaboration.  It is provided  under  the terms  and *
-// * conditions of the Geant4 Software License,  included in the file *
-// * LICENSE and available at  http://cern.ch/geant4/license .  These *
-// * include a list of copyright holders.                             *
-// *                                                                  *
-// * Neither the authors of this software system, nor their employing *
-// * institutes,nor the agencies providing financial support for this *
-// * work  make  any representation or  warranty, express or implied, *
-// * regarding  this  software system or assume any liability for its *
-// * use.  Please see the license in the file  LICENSE  and URL above *
-// * for the full disclaimer and the limitation of liability.         *
-// *                                                                  *
-// * This  code  implementation is the result of  the  scientific and *
-// * technical work of the GEANT4 collaboration.                      *
-// * By using,  copying,  modifying or  distributing the software (or *
-// * any work based  on the software)  you  agree  to acknowledge its *
-// * use  in  resulting  scientific  publications,  and indicate your *
-// * acceptance of all terms of the Geant4 Software license.          *
-// ********************************************************************
-//
-//
-/// \file EventAction.hh
-/// \brief Definition of the B2::EventAction class
-
 #ifndef B2EventAction_h
 #define B2EventAction_h 1
 
+#include "Constants.hh"
+#include "DataStructure.hh"
 #include "G4UserEventAction.hh"
-
 #include "globals.hh"
 
+class RootIO;
+class TFile;
+class PrimaryGeneratorAction;
 
-
-/// Event action class
-
+//
 class EventAction : public G4UserEventAction
 {
-  public:
-    EventAction();
-    ~EventAction() override;
+public:
+  EventAction(PrimaryGeneratorAction *pg, RootIO *rio);
+  ~EventAction() override;
 
-    void  BeginOfEventAction(const G4Event* ) override;
-    void    EndOfEventAction(const G4Event* ) override;
+  void  BeginOfEventAction(const G4Event *) override;
+  void  EndOfEventAction(const G4Event *) override;
+
+private:
+  void GausEnergy(G4double res);
+  bool IfThresholdTrigger(G4double threshold);
+
+private:
+  G4int hc_id_si;
+  G4int hc_id_hpge;
+  G4int hc_id_labr3;
+
+  G4double threshold_si;
+  G4double energy_resolution_si;
+  G4double threshold_hpge;
+  G4double energy_resolution_hpge;
+  G4double threshold_labr3;
+  G4double energy_resolution_labr3;
+
+private:
+  EventData event_data;
+
+  PrimaryGeneratorAction *primary;
+  RootIO *root_io;   
 };
-
 
 
 #endif

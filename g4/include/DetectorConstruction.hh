@@ -1,73 +1,89 @@
-//
-// ********************************************************************
-// * License and Disclaimer                                           *
-// *                                                                  *
-// * The  Geant4 software  is  copyright of the Copyright Holders  of *
-// * the Geant4 Collaboration.  It is provided  under  the terms  and *
-// * conditions of the Geant4 Software License,  included in the file *
-// * LICENSE and available at  http://cern.ch/geant4/license .  These *
-// * include a list of copyright holders.                             *
-// *                                                                  *
-// * Neither the authors of this software system, nor their employing *
-// * institutes,nor the agencies providing financial support for this *
-// * work  make  any representation or  warranty, express or implied, *
-// * regarding  this  software system or assume any liability for its *
-// * use.  Please see the license in the file  LICENSE  and URL above *
-// * for the full disclaimer and the limitation of liability.         *
-// *                                                                  *
-// * This  code  implementation is the result of  the  scientific and *
-// * technical work of the GEANT4 collaboration.                      *
-// * By using,  copying,  modifying or  distributing the software (or *
-// * any work based  on the software)  you  agree  to acknowledge its *
-// * use  in  resulting  scientific  publications,  and indicate your *
-// * acceptance of all terms of the Geant4 Software license.          *
-// ********************************************************************
-//
-//
-/// \file DetectorConstruction.hh
-/// \brief Definition of the B2a::DetectorConstruction class
+#ifndef DetectorConstruction_h
+#define DetectorConstruction_h 1
 
-#ifndef B2aDetectorConstruction_h
-#define B2aDetectorConstruction_h 1
+#include "Constants.hh"
+#include "LaBr3SD.hh"
+#include "LaBr3Array.hh"
+#include "HPGeSD.hh"
+#include "HPGeArray.hh"
+#include "SiSD.hh"
+#include "SiArray.hh"
 
-#include "globals.hh"
 #include "G4VUserDetectorConstruction.hh"
 #include "tls.hh"
 
-class G4VPhysicalVolume;
+#include "G4Element.hh"
+#include "G4Region.hh"
+#include "G4RegionStore.hh"
+#include "G4ProductionCuts.hh"
+#include "G4VPhysicalVolume.hh"
+#include "G4PhysicalConstants.hh"
+
 class G4LogicalVolume;
 class G4Material;
 class G4UserLimits;
-class G4GlobalMagFieldMessenger;
-
-class DetectorMessenger;
-
-/// Detector construction class to define materials, geometry
-/// and global uniform magnetic field.
 
 class DetectorConstruction : public G4VUserDetectorConstruction
 {
-  public:
-    DetectorConstruction();
-    ~DetectorConstruction() override;
+public:
+  DetectorConstruction();
+  ~DetectorConstruction() override;
 
-  public:
-    G4VPhysicalVolume* Construct() override;
-    void ConstructSDandField() override;
-    G4LogicalVolume* fScoringVolume = nullptr;
-  private:
-    // methods
-    void DefineMaterials();
-    G4VPhysicalVolume* DefineVolumes();
+public:
+  G4VPhysicalVolume* Construct() override;
 
-                                       // magnetic field messenger
-    G4LogicalVolume*  fLogicTarget = nullptr;  // pointer to the logical Target
-    G4LogicalVolume** fLogicStrip = nullptr; // pointer to the logical Chamber
+public:
+  G4LogicalVolume* GetChamberShellLog(G4String name);
+  G4LogicalVolume* GetChamberBodyLog(G4String name);
+  G4LogicalVolume* GetTargetLog(G4String name);
+  G4LogicalVolume* GetTargetBackingLog(G4String name);
 
-    G4Material*       fTargetMaterial = nullptr;  // pointer to the target  material
-    G4Material*       fStripMaterial = nullptr; // pointer to the chamber material
-  
+  G4LogicalVolume* GetFlangeYLog(G4String name);
+  G4LogicalVolume* GetFlangeZLog(G4String name);
+
+  // Set methods
+  void SetMaxStep(G4double );
+  void SetCheckOverlaps(G4bool );
+
+  void SetTargetThickness(G4double th) { target_thickness = th; }
+  void SetTargetMaterial(G4String str);
+
+  void SetTargetBackingFlag(G4bool bl) { flag_target_backing = bl; }
+
+private:
+  // methods
+  void DefineMaterials();
+  G4VPhysicalVolume *DefineVolumes();
+
+private:
+  SiArray *si_array;
+  HPGeArray *hpge_array;
+  LaBr3Array *labr3_array;
+
+private:
+  G4bool flag_target_backing;
+
+  G4double target_thickness;
+  G4Material *target_mat;
+
+private:
+  //
+  G4LogicalVolume *world_log;
+
+  //
+  G4Material *air_mat;
+  G4Material *vaccum_mat;
+  G4Material *al_mat;
+  G4Material *si_mat;
+  G4Material *stainless_steel_mat;
+  G4Material *enriched_11b_mat;
+  G4Material *natured_11b_high_density_mat;
+  G4Material *natured_11b_low_density_mat;
+  G4Material *borated_pe_mat;
+  G4Material *hb_mat;
+
+  G4UserLimits *step_limit;
+  G4bool check_overlaps;
 };
-
 
 #endif

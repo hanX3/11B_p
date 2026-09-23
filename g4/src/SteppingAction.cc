@@ -1,87 +1,52 @@
-//
-// ********************************************************************
-// * License and Disclaimer                                           *
-// *                                                                  *
-// * The  Geant4 software  is  copyright of the Copyright Holders  of *
-// * the Geant4 Collaboration.  It is provided  under  the terms  and *
-// * conditions of the Geant4 Software License,  included in the file *
-// * LICENSE and available at  http://cern.ch/geant4/license .  These *
-// * include a list of copyright holders.                             *
-// *                                                                  *
-// * Neither the authors of this software system, nor their employing *
-// * institutes,nor the agencies providing financial support for this *
-// * work  make  any representation or  warranty, express or implied, *
-// * regarding  this  software system or assume any liability for its *
-// * use.  Please see the license in the file  LICENSE  and URL above *
-// * for the full disclaimer and the limitation of liability.         *
-// *                                                                  *
-// * This  code  implementation is the result of  the  scientific and *
-// * technical work of the GEANT4 collaboration.                      *
-// * By using,  copying,  modifying or  distributing the software (or *
-// * any work based  on the software)  you  agree  to acknowledge its *
-// * use  in  resulting  scientific  publications,  and indicate your *
-// * acceptance of all terms of the Geant4 Software license.          *
-// ********************************************************************
-//
-//
-/// \file SteppingAction.cc
-/// \brief Implementation of the B1::SteppingAction class
-
 #include "SteppingAction.hh"
-#include "EventAction.hh"
-#include "DetectorConstruction.hh"
+#include "RootIO.hh"
 
-#include "G4Proton.hh"
-
-#include "G4Step.hh"
-#include "G4Event.hh"
 #include "G4RunManager.hh"
-#include "G4LogicalVolume.hh"
-#include "G4PhysicalConstants.hh"
+#include "G4Step.hh"
 #include "G4SystemOfUnits.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-SteppingAction::SteppingAction(EventAction* eventAction)
-: fEventAction(eventAction)
-{}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+SteppingAction::SteppingAction(DetectorConstruction* dc, RootIO* rio)
+  :G4UserSteppingAction(),
+   detector_construction(dc),
+   root_io(rio)
+{
+  step_data.Clear();
+}
 
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 SteppingAction::~SteppingAction()
 {}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 void SteppingAction::UserSteppingAction(const G4Step* step)
 {
+  if((MASK&0b100)==0b100){
+    step_data.event = G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID();
+    step_data.track = step->GetTrack()->GetTrackID();
+    step_data.de = step->GetTotalEnergyDeposit();
+    step_data.pre_x = step->GetPreStepPoint()->GetPosition().x();
+    step_data.pre_y = step->GetPreStepPoint()->GetPosition().y();
+    step_data.pre_z = step->GetPreStepPoint()->GetPosition().z();
+    step_data.pre_total_energy = step->GetPreStepPoint()->GetTotalEnergy();
+    step_data.pre_kine_energy = step->GetPreStepPoint()->GetKineticEnergy();
+    step_data.post_x = step->GetPostStepPoint()->GetPosition().x();
+    step_data.post_y = step->GetPostStepPoint()->GetPosition().y();
+    step_data.post_z = step->GetPostStepPoint()->GetPosition().z();
+    step_data.post_total_energy = step->GetPreStepPoint()->GetTotalEnergy();
+    step_data.post_kine_energy = step->GetPreStepPoint()->GetKineticEnergy();
+    step_data.length = step->GetStepLength();
+    strcpy(step_data.volume, step->GetTrack()->GetVolume()->GetName());
+    strcpy(step_data.particle, step->GetTrack()->GetDefinition()->GetParticleName());
+    strcpy(step_data.process, step->GetPostStepPoint()->GetProcessDefinedStep()->GetProcessName());
 
-/*
-  if (!fScoringVolume) {
-    const DetectorConstruction* detConstruction
-      = static_cast<const DetectorConstruction*>
-        (G4RunManager::GetRunManager()->GetUserDetectorConstruction());
-    fScoringVolume = detConstruction->GetScoringVolume();
+    /*
+    if(strcmp(step_data.particle, "gamma")==0 && step->GetTrack()->GetParentID()==1 && strcmp(step_data.detector, "Target")==0){
+      root_io->FillStepTree(step_data);
+    }
+    */
+    root_io->FillStepTree(step_data);
   }
-
-  // get volume of the current step
-  G4LogicalVolume* volume
-    = step->GetPreStepPoint()->GetTouchableHandle()
-      ->GetVolume()->GetLogicalVolume();
-  G4int ionID = step->GetTrack()->GetParentID();
-  G4double Length = step->GetStepLength() / nm;
-  G4String ProcessName = step->GetPostStepPoint()->GetProcessDefinedStep()->GetProcessName();
-  // check if we are in scoring volume
-  if (volume != fScoringVolume) return;
- // if (step->GetTrack()->GetTrackID() != 0 ) return;
-  // collect energy deposited in this step
-  if(ProcessName != "StepLimiter" && ProcessName != "Transportation")  
-  {
-  G4double edepStep = step->GetTotalEnergyDeposit() / keV;
-  G4cout<<ionID<<" Energy Deposit: "<<edepStep<<" "<<Length<<" "<<ProcessName<<G4endl;
-  }
-*/
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
