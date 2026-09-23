@@ -16,9 +16,9 @@
 # Validation-only cross-section bias.
 /h11b/crossSectionBiasFactor 1000000
 
-/h11b/evaluatedCrossSection tentori2023
-/h11b/backgroundMode phaseSpace
-/h11b/backgroundBiasFactor 1
+/h11b/enableDirectDecay true
+/h11b/165SequentialDecayFraction 0.0
+/h11b/675SequentialDecayFraction 0.0
 
 # 165-keV primary alpha angular distribution
 /h11b/enable165PrimaryAngularDistribution false

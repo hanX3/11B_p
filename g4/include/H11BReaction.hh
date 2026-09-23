@@ -23,13 +23,8 @@ public:
   {
     Resonance165 = 0,
     Resonance675 = 1,
-    Background3Alpha = 2,
+    DirectDecay3Alpha = 2,
     GammaCapture12C = 3
-  };
-
-  enum class BackgroundMode
-  {
-    PhaseSpace = 2
   };
 
   enum ResonanceType
@@ -45,14 +40,22 @@ public:
 public:
   G4HadFinalState* ApplyYourself(const G4HadProjectile& projectile, G4Nucleus& target) override;
   void ReactionKinematic(const G4HadProjectile& projectile, G4ParticleDefinition* target, G4ParticleDefinition* product1, G4ParticleDefinition* product2, G4ParticleDefinition* product3);
-  static BackgroundMode GetBackgroundMode();
-  static void SetBackgroundMode(BackgroundMode mode);
-  static void SetBackgroundMode(const G4String& mode);
-  static const char* GetBackgroundModeName();
-  void SetEvaluatedCrossSectionModeCommand(const G4String& mode);
   void SetCrossSectionBiasFactorCommand(G4double factor);
-  void SetBackgroundBiasFactorCommand(G4double factor);
-  void SetBackgroundModeCommand(const G4String& mode);
+  void Set165SequentialDecayFractionCommand(G4double fraction);
+  void Set675SequentialDecayFractionCommand(G4double fraction);
+  void SetDirectDecayEnabledCommand(G4bool enabled);
+  void Set165BWScaleFactorCommand(G4double factor);
+  void Set675ScaleFactorCommand(G4double factor);
+  void Set675AlphaDecayModelCommand(const G4String& model);
+  void Set675StrictL1FractionCommand(G4double value);
+  void Set675StrictL13PhaseCommand(G4double value);
+  void Set675StrictCoherentL13Command(G4bool enabled);
+  void Set675StrictPermutationSymmetrizedCommand(G4bool enabled);
+  void Set675Strict8BeLambdaEnergyCommand(G4double value);
+  void Set675Strict8BeReducedWidthSquaredCommand(G4double value);
+  void Set675StrictWeightMaxSafetyFactorCommand(G4double value);
+  void Set675StrictWeightMaxScanCandidatesCommand(G4int value);
+  void Set675StrictMaxSamplingAttemptsCommand(G4int value);
   void SetEnable675PrimaryAngularDistributionCommand(G4bool enabled);
   void Set675PrimaryAngularA1Command(G4double value);
   void Set675PrimaryAngularA2Command(G4double value);
@@ -89,6 +92,7 @@ private:
   G4bool SelectReactionChannel(G4double kinetic_energy_lab);
   void DefineCommands();
   void GenerateThreeBodyPhaseSpace(const G4HadProjectile& projectile, G4ParticleDefinition* target, G4ParticleDefinition* product1, G4ParticleDefinition* product2, G4ParticleDefinition* product3);
+  void Generate675SymmetrizedCoherent3Alpha(const G4HadProjectile& projectile, G4ParticleDefinition* target, G4ParticleDefinition* product1, G4ParticleDefinition* product2, G4ParticleDefinition* product3);
   void GenerateGammaCapture(const G4HadProjectile& projectile, G4ParticleDefinition* target);
   void Generate165Gamma0(const G4LorentzVector& initial_cm, const G4LorentzVector& initial_lab, G4ParticleDefinition* c12_ground, G4ParticleDefinition* gamma_particle, const G4ThreeVector& beam_axis_cm);
   void Generate165Gamma1Cascade(const G4LorentzVector& initial_cm, const G4LorentzVector& initial_lab, G4ParticleDefinition* c12_ground, G4ParticleDefinition* gamma_particle);

@@ -1,0 +1,29 @@
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+# 165-keV beam, only 165 gamma capture enabled, heavily biased so the
+# gamma channel dominates reaction_channel==3 statistics.
+/gun/particle proton
+/gun/energy 165 keV
+
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+/output/printConfig
+
+/h11b/crossSectionBiasFactor 1000000
+/h11b/enableDirectDecay true
+/h11b/165SequentialDecayFraction 0.0
+/h11b/675SequentialDecayFraction 0.0
+
+/h11b/enable165GammaCapture true
+/h11b/enable675GammaCapture false
+/h11b/gammaBiasFactor 10000
+
+/h11b/printConfig
+/run/beamOn 100000

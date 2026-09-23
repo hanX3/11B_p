@@ -24,6 +24,17 @@ G4bool g_enable_675_alpha1_secondary_angular_correlation = H11BDefaultEnable675A
 G4double g_675_alpha1_secondary_a2 = H11BDefault675Alpha1SecondaryA2;
 G4double g_675_alpha1_secondary_a4 = H11BDefault675Alpha1SecondaryA4;
 
+H11B675AlphaDecayModel g_675_alpha_decay_model = H11BDefault675AlphaDecayModel;
+G4double g_675_strict_l1_fraction = H11B675StrictDefaultL1Fraction;
+G4double g_675_strict_l13_phase = H11B675StrictDefaultL13Phase;
+G4bool g_675_strict_coherent_l13 = H11B675StrictDefaultCoherentL13;
+G4bool g_675_strict_permutation_symmetrized = H11B675StrictDefaultPermutationSymmetrized;
+G4double g_675_strict_8be_lambda_energy = H11B675StrictDefault8BeLambdaEnergy;
+G4double g_675_strict_8be_reduced_width_squared = H11B675StrictDefault8BeReducedWidthSquared;
+G4double g_675_strict_weight_max_safety_factor = H11B675StrictDefaultWeightMaxSafetyFactor;
+G4int g_675_strict_weight_max_scan_candidates = H11B675StrictDefaultWeightMaxScanCandidates;
+G4int g_675_strict_max_sampling_attempts = H11B675StrictDefaultMaxSamplingAttempts;
+
 G4bool g_enable_165_gamma0_angular_distribution = H11BDefaultEnable165Gamma0AngularDistribution;
 G4double g_165_gamma0_a1 = H11B165Gamma0AngularA1Default;
 G4double g_165_gamma0_a2 = H11B165Gamma0AngularA2Default;
@@ -37,6 +48,21 @@ G4double g_gamma_bias_factor = H11BDefaultGammaBiasFactor;
 G4bool IsValidFactor(G4double factor)
 {
   return std::isfinite(factor) && factor >= 1.0;
+}
+
+G4bool IsFiniteNonNegative(G4double value)
+{
+  return std::isfinite(value) && value >= 0.0;
+}
+
+G4bool IsFinitePositive(G4double value)
+{
+  return std::isfinite(value) && value > 0.0;
+}
+
+G4double Clamp01(G4double value)
+{
+  return std::clamp(value, 0.0, 1.0);
 }
 
 G4double WeightPrimaryA1A2(G4double x, G4double a1, G4double a2)
@@ -296,6 +322,162 @@ G4double Get675Alpha1SecondaryA2()
 G4double Get675Alpha1SecondaryA4()
 {
   return g_675_alpha1_secondary_a4;
+}
+
+H11B675AlphaDecayModel Get675AlphaDecayModel()
+{
+  return g_675_alpha_decay_model;
+}
+
+void Set675AlphaDecayModel(H11B675AlphaDecayModel model)
+{
+  g_675_alpha_decay_model = model;
+}
+
+void Set675AlphaDecayModel(const G4String& model)
+{
+  if (model == "legacy" || model == "legacyLegendreA2A4" || model == "sequentialLegendreA2A4") {
+    Set675AlphaDecayModel(H11B675AlphaDecayModel::LegacyLegendreA2A4);
+    return;
+  }
+
+  if (model == "strict" || model == "symmetrizedCoherentL1L3" || model == "coherentL1L3") {
+    Set675AlphaDecayModel(H11B675AlphaDecayModel::SymmetrizedCoherentL1L3);
+    return;
+  }
+
+  G4cerr << "Unknown /h11b/675AlphaDecayModel '" << model
+         << "'. Use legacyLegendreA2A4 or symmetrizedCoherentL1L3." << G4endl;
+}
+
+const char* Get675AlphaDecayModelName()
+{
+  switch (g_675_alpha_decay_model) {
+  case H11B675AlphaDecayModel::LegacyLegendreA2A4:
+    return "legacyLegendreA2A4";
+  case H11B675AlphaDecayModel::SymmetrizedCoherentL1L3:
+    return "symmetrizedCoherentL1L3";
+  }
+
+  return "unknown";
+}
+
+G4double Get675StrictL1Fraction()
+{
+  return g_675_strict_l1_fraction;
+}
+
+void Set675StrictL1Fraction(G4double value)
+{
+  if (!std::isfinite(value)) {
+    G4cerr << "Invalid /h11b/675StrictL1Fraction " << value << ". Use a finite value in [0,1]." << G4endl;
+    return;
+  }
+  g_675_strict_l1_fraction = Clamp01(value);
+}
+
+G4double Get675StrictL13Phase()
+{
+  return g_675_strict_l13_phase;
+}
+
+void Set675StrictL13Phase(G4double value)
+{
+  if (!std::isfinite(value)) {
+    G4cerr << "Invalid /h11b/675StrictL13Phase " << value << ". Use a finite value in radians." << G4endl;
+    return;
+  }
+  g_675_strict_l13_phase = value;
+}
+
+G4bool Get675StrictCoherentL13()
+{
+  return g_675_strict_coherent_l13;
+}
+
+void Set675StrictCoherentL13(G4bool enabled)
+{
+  g_675_strict_coherent_l13 = enabled;
+}
+
+G4bool Get675StrictPermutationSymmetrized()
+{
+  return g_675_strict_permutation_symmetrized;
+}
+
+void Set675StrictPermutationSymmetrized(G4bool enabled)
+{
+  g_675_strict_permutation_symmetrized = enabled;
+}
+
+G4double Get675Strict8BeLambdaEnergy()
+{
+  return g_675_strict_8be_lambda_energy;
+}
+
+void Set675Strict8BeLambdaEnergy(G4double value)
+{
+  if (!IsFinitePositive(value)) {
+    G4cerr << "Invalid /h11b/675Strict8BeLambdaEnergy " << value << ". Use a finite positive energy." << G4endl;
+    return;
+  }
+  g_675_strict_8be_lambda_energy = value;
+}
+
+G4double Get675Strict8BeReducedWidthSquared()
+{
+  return g_675_strict_8be_reduced_width_squared;
+}
+
+void Set675Strict8BeReducedWidthSquared(G4double value)
+{
+  if (!IsFinitePositive(value)) {
+    G4cerr << "Invalid /h11b/675Strict8BeReducedWidthSquared " << value << ". Use a finite positive energy." << G4endl;
+    return;
+  }
+  g_675_strict_8be_reduced_width_squared = value;
+}
+
+G4double Get675StrictWeightMaxSafetyFactor()
+{
+  return g_675_strict_weight_max_safety_factor;
+}
+
+void Set675StrictWeightMaxSafetyFactor(G4double value)
+{
+  if (!IsFinitePositive(value)) {
+    G4cerr << "Invalid /h11b/675StrictWeightMaxSafetyFactor " << value << ". Use a finite positive value." << G4endl;
+    return;
+  }
+  g_675_strict_weight_max_safety_factor = value;
+}
+
+G4int Get675StrictWeightMaxScanCandidates()
+{
+  return g_675_strict_weight_max_scan_candidates;
+}
+
+void Set675StrictWeightMaxScanCandidates(G4int value)
+{
+  if (value < 1) {
+    G4cerr << "Invalid /h11b/675StrictWeightMaxScanCandidates " << value << ". Use an integer >= 1." << G4endl;
+    return;
+  }
+  g_675_strict_weight_max_scan_candidates = value;
+}
+
+G4int Get675StrictMaxSamplingAttempts()
+{
+  return g_675_strict_max_sampling_attempts;
+}
+
+void Set675StrictMaxSamplingAttempts(G4int value)
+{
+  if (value < 1) {
+    G4cerr << "Invalid /h11b/675StrictMaxSamplingAttempts " << value << ". Use an integer >= 1." << G4endl;
+    return;
+  }
+  g_675_strict_max_sampling_attempts = value;
 }
 
 G4bool GetEnable165Gamma0AngularDistribution()

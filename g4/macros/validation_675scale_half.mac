@@ -1,0 +1,29 @@
+/run/initialize
+
+/control/verbose 1
+/run/verbose 1
+/event/verbose 0
+/tracking/verbose 0
+
+/gun/particle proton
+/gun/energy 675 keV
+
+/output/saveReaction true
+/output/saveEvent false
+/output/saveTrack false
+/output/saveStep false
+/output/printConfig
+
+/h11b/enableDirectDecay true
+/h11b/165SequentialDecayFraction 0.99
+/h11b/675SequentialDecayFraction 0.99
+/h11b/165BWScaleFactor 1.0
+/h11b/675ScaleFactor 0.5
+/h11b/crossSectionBiasFactor 1000000
+/h11b/gammaBiasFactor 1
+
+/h11b/enable165GammaCapture true
+/h11b/enable675GammaCapture true
+
+/h11b/printConfig
+/run/beamOn 20000

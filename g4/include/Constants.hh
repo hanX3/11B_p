@@ -32,6 +32,17 @@ enum class H11BGammaAngularMode
   FixedA1A2 = 2
 };
 
+// 675-keV alpha-decay final-state generator.
+// LegacyLegendreA2A4 keeps the pre-existing sequential alpha+8Be(2+) model
+// with an empirical A2/A4 secondary angular correlation.
+// SymmetrizedCoherentL1L3 uses a Kuhlwein-2022-inspired symmetrized,
+// coherent L=1/L=3 sequential 3-alpha amplitude for the 16.62-MeV 2- state.
+enum class H11B675AlphaDecayModel
+{
+  LegacyLegendreA2A4 = 0,
+  SymmetrizedCoherentL1L3 = 1
+};
+
 
 enum class DetectorGeometryMode
 {
@@ -119,7 +130,10 @@ constexpr G4double Ex8BeGamma = Gamma8Be2Plus;
 // Energies used by the cross-section code are in the center-of-mass system.
 // The TUNL table lists proton beam energies Ep in the lab system; therefore
 // Ecm = 11/12 * Ep is used for a proton incident on a stationary 11B target.
-constexpr G4double H11B165ResonanceEnergy = 148.3 * keV; // TUNL: Ep = 0.162 MeV, Ex = 16.106 MeV
+// Center-only scan against the Tentori first peak gives Er = 147.95 keV
+// in the center-of-mass system, aligning the generated BW maximum with the
+// evaluated total-cross-section peak near Ep(lab) = 161.55 keV.
+constexpr G4double H11B165ResonanceEnergy = 147.95 * keV; // Ex ~= 16.106 MeV
 constexpr G4double H11B165TotalWidth = 5.3 * keV;
 constexpr G4double H11B165ProtonWidth = 0.0215 * keV;
 constexpr G4double H11B165Alpha0Width = 0.26 * keV;
@@ -129,24 +143,17 @@ constexpr G4double H11B165Gamma1Width = 18.0 * eV;
 constexpr G4double H11B165GammaWidth = H11B165Gamma0Width + H11B165Gamma1Width;
 constexpr G4double H11B165SpinStatFactor = 5.0 / 8.0;
 
-constexpr G4double H11B675ResonanceEnergy = 618.75 * keV; // TUNL: Ep = 0.675 MeV, Ex = 16.576 MeV
-constexpr G4double H11B675TotalWidth = 300.0 * keV;
-constexpr G4double H11B675ProtonWidth = 150.0 * keV;
 // The 16.576-MeV 2- resonance cannot decay through the alpha + 8Be(g.s.)
 // alpha0 channel by parity conservation, so the 675-keV alpha0 width is fixed
 // to zero in this model.
 constexpr G4double H11B675Alpha0Width = 0.0 * keV;
 constexpr G4double H11B675Alpha1Width = 150.0 * keV;
-constexpr G4double H11B675Gamma0WidthReferenceUnused = 0.4 * eV;
-constexpr G4double H11B675Gamma1WidthReferenceUnused = 8.0 * eV;
-constexpr G4double H11B675SpinStatFactor = 5.0 / 8.0;
 
 // The entrance-channel proton width is always calculated using the full
 // Coulomb penetrability ratio P_l(E) / P_l(E_r).
 
 // Entrance-channel orbital angular momentum for p + 11B.
 constexpr G4int H11B165EntranceOrbitalL = 1; // likely p-wave
-constexpr G4int H11B675EntranceOrbitalL = 0; // likely s-wave, check with adopted resonance assignment
 
 // Use full Coulomb penetrability for 8Be(2+) -> alpha + alpha line shape.
 constexpr G4bool H11BUseFullCoulombPenetrabilityFor8Be2Plus = true;
@@ -206,9 +213,24 @@ constexpr G4double H11B675ExitL1Fraction = 0.76;
 constexpr G4double H11B675ExitL13Phase = 0.67 * 2.0 * 3.14159265358979323846;
 constexpr G4bool H11B675UseCoherentL13Interference = false;
 
+// Strict 675-keV alpha-decay defaults.  The model follows the 2022 PLB
+// exclusive-decay analysis at the event-generator level: alpha+8Be(2+)
+// sequential decay, coherent L=1/L=3 primary-emission amplitudes, and
+// symmetrization over the three identical alpha particles.
+constexpr H11B675AlphaDecayModel H11BDefault675AlphaDecayModel = H11B675AlphaDecayModel::SymmetrizedCoherentL1L3;
+constexpr G4double H11B675StrictDefaultL1Fraction = 0.76;
+constexpr G4double H11B675StrictDefaultL13Phase = 0.67 * 2.0 * 3.14159265358979323846;
+constexpr G4bool H11B675StrictDefaultCoherentL13 = true;
+constexpr G4bool H11B675StrictDefaultPermutationSymmetrized = true;
+constexpr G4double H11B675StrictDefault8BeLambdaEnergy = 3037.0 * keV;
+constexpr G4double H11B675StrictDefault8BeReducedWidthSquared = 1075.0 * keV;
+constexpr G4double H11B675StrictDefaultWeightMaxSafetyFactor = 3.0;
+constexpr G4int H11B675StrictDefaultWeightMaxScanCandidates = 2000;
+constexpr G4int H11B675StrictDefaultMaxSamplingAttempts = 10000;
+
 // 12C gamma capture channels following 11B(p,gamma)12C.
 // Gamma capture is an independent exit channel competing with 3alpha; it is
-// not included in the phenomenological Background3Alpha yield.
+// not included in the phenomenological directdecay yield.
 constexpr G4bool H11BDefault165GammaCaptureEnabled = true;
 constexpr G4double H11BDefaultGammaBiasFactor = 1.0;
 

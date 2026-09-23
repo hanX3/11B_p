@@ -92,7 +92,10 @@ void HPGeDetector::PlaceAlShell(const G4Transform3D& transfrom_3d)
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 namespace {
-constexpr G4double HPGeRingTransverseRadiusMm = 214.75;
+// Transverse center radius for the 45/135-degree HPGe rings.
+// 240 mm preserves target alignment while moving the HPGe housings outside
+// the chamber flange envelope.
+constexpr G4double HPGeRingTransverseRadiusMm = 240.0;
 }
 
 std::map<G4String, G4int> HPGeDetector::map_name_to_ring_id = {{"HPGe_Forward45", 2}, {"HPGe_Backward135", 3}};
@@ -117,7 +120,7 @@ std::map<G4String, std::array<G4double, 4>> HPGeDetector::map_hpge_par = {
 //
 // The four sectors are placed at azimuths 0, 180, 90, and 270 deg by HPGeArray::SidePortPosition().
 // The detector axes are aimed at the target position. With TargetZPos = 170 mm and
-// transverse radius = 214.75 mm, these positions correspond to polar angles of 45 deg
+// transverse radius = 240 mm, these positions correspond to polar angles of 45 deg
 // and 135 deg relative to the beam axis at the target.
 std::map<G4String, std::array<G4double, 3>> HPGeDetector::map_placement_par = {
     {"HPGe_Forward45", {HPGeRingTransverseRadiusMm, 0., TargetZPos / mm + HPGeRingTransverseRadiusMm}},

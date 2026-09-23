@@ -56,6 +56,8 @@ configure_file(
 # Copy the complete macros directory to the build directory at build time.
 # This ensures newly added validation macros are also available under build/macros/.
 add_custom_target(copy_macros ALL
+  COMMAND ${CMAKE_COMMAND} -E remove_directory
+          ${PROJECT_BINARY_DIR}/macros
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${PROJECT_SOURCE_DIR}/macros
           ${PROJECT_BINARY_DIR}/macros

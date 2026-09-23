@@ -36,54 +36,62 @@ chamber and aligned to existing side ports.  The event ROOT tree keeps the old
 
 ## 675-keV Angular Distribution
 
-For the 675-keV resonance, the primary alpha direction is sampled isotropically
-in the 12C center-of-mass frame.  The relevant angular structure is the
-internal angular correlation in the 8Be*(2+) -> alpha + alpha decay.
+For the 675-keV resonance, the primary alpha direction is isotropic by default
+unless `/h11b/enable675PrimaryAngularDistribution true` is set with explicit
+A1/A2 coefficients.  The alpha1 sequential branch can use either the historical
+Legendre A2/A4 correlation or the symmetrized coherent L=1/L=3 final-state
+generator.
 
-The implemented physics default is the Stave 2011 pure L=3 internal angular
-correlation,
-
-```text
-W(chi) = 1 + (2/7) P2(cos chi) - (9/7) P4(cos chi)
-```
-
-where chi is the secondary-alpha angle relative to the 8Be* recoil direction.
 The runtime command
 
 ```text
-/h11b/675DecayModel isotropicSequential
-/h11b/675DecayModel stave2011L3
+/h11b/675AlphaDecayModel legacyLegendreA2A4
+/h11b/675AlphaDecayModel symmetrizedCoherentL1L3
 ```
 
-selects the 675-keV alpha1 internal decay model.  In `stave2011L3`, the
-8Be*(2+) excitation-energy sampling uses pure L=3 alpha+8Be penetrability for
-the first breakup, consistent with the pure L=3 internal angular correlation.
-In `isotropicSequential`, the internal 8Be*(2+) decay is isotropic and the
-first-breakup penetrability keeps the previous L=1/L=3 mixture for backward
-compatibility comparisons.
+selects the 675-keV alpha-decay generator.  The default run macro uses
+`symmetrizedCoherentL1L3` with the explicit strict-model parameters recorded in
+ROOT diagnostics.
 
-`Kuhlwein2022L1L3` is reserved but not implemented.  It is not exposed as a
-valid `/h11b/675DecayModel` candidate for production runs; if requested
-manually, the current model is left unchanged.
+## Cross-Section Model
 
-## Background 3-Alpha Channel
-
-`Background3Alpha` represents the residual 11B(p,3alpha) yield not assigned to
-the explicit 165-keV or 675-keV resonance components.  It is not elastic
-scattering.
-
-When `/h11b/backgroundMode alpha1Sequential` is used, the event is generated as
-an alpha + 8Be*(2+) sequential decay and inherits the current 675-keV alpha1
-internal decay model.  The reaction label records the actual internal model,
-for example:
+The 3-alpha model uses two allocation components:
 
 ```text
-background3alpha_alpha1_stave2011L3
-background3alpha_alpha1_isotropicSequential
+sigma_165_model = current 165-keV Breit-Wigner component
+sigma_675_model = weighted_chebE16 analytic fit675 component
 ```
 
-ROOT output also records the model through `h11b675_decay_model_used` and
-`background_sequential_model`.
+The fit675 function is defined in proton lab energy as:
+
+```text
+sigma_fit675(Ep_lab) = exp(sum c_n T_n(z)) barn
+z = 2*(Ep_lab - 0.020)/(1.000 - 0.020) - 1
+```
+
+where the coefficients are kept in `H11BCrossSection::GetFit675CrossSection`
+and mirrored by `cs_model/plot_165bw_plus_weighted_cheb675.py`.  Runtime C++
+does not use the Tentori2023 formula; Tentori2023 is kept only in `cs_model` for
+comparison plots.
+
+## Direct 3-Alpha Channel
+
+The direct 3-alpha channel is a phase-space branch split out of the 165-keV and
+675-keV allocation components.  It is not elastic scattering and it is no
+longer selected through a runtime mode option.
+
+Use the two sequential-fraction commands to set the direct fraction of each
+component:
+
+```text
+/h11b/enableDirectDecay true
+/h11b/165SequentialDecayFraction 0.99
+/h11b/675SequentialDecayFraction 0.99
+```
+
+The corresponding direct fractions are `1 - sequential_fraction`.  The old
+`backgroundMode`, `directDecayMode`, `backgroundBiasFactor`, and
+`directDecayFraction` macro commands have been removed.
 
 ## Gamma Capture Channels
 
@@ -94,11 +102,11 @@ Gamma capture is implemented as an independent exit channel competing with the
 p + 11B -> 12C* -> 12C + gamma
 ```
 
-It is not part of `Background3Alpha`, and it is not generated after a 3-alpha
-decay.  The 3-alpha evaluated decomposition remains:
+It is not part of the direct 3-alpha branch, and it is not generated after a
+3-alpha decay.  The 3-alpha evaluated decomposition remains:
 
 ```text
-sigma_3alpha_eval = sigma_165_used + sigma_675_used + sigma_background_3alpha
+sigma_3alpha_eval = sigma_165_used + sigma_675_used + sigma_directdecay
 ```
 
 The physical total cross section and Monte-Carlo sampling total are tracked

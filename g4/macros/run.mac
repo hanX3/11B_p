@@ -15,16 +15,17 @@
 #/hits/verbose 2
 
 # H11B reaction model
-/h11b/evaluatedCrossSection tentori2023
 
-# Background is now phase-space only: direct instantaneous 3-alpha emission.
-# backgroundBiasFactor changes only the sampling fraction of phase-space background.
-#   1   : no background-specific bias
-#   > 1 : oversample phase-space background
-#   0-1 : undersample phase-space background
-# Event weights in the reaction tree correct the biased sampling.
-/h11b/backgroundMode phaseSpace
-/h11b/backgroundBiasFactor 1
+# Cross-section decomposition:
+#   165 total = 165-keV BW component, optionally scaled by 165BWScaleFactor
+#   675 total = fit675 component, optionally scaled by 675ScaleFactor
+#   each resonance total is split into sequential and direct-decay branches
+#   direct-decay fraction is automatically 1 - sequential-decay fraction
+/h11b/enableDirectDecay true
+/h11b/165SequentialDecayFraction 0.99
+/h11b/675SequentialDecayFraction 0.99
+/h11b/165BWScaleFactor 1.0
+/h11b/675ScaleFactor 1.0
 
 /h11b/crossSectionBiasFactor 1
 
@@ -68,6 +69,20 @@
 /h11b/enable675Alpha1SecondaryAngularCorrelation true
 /h11b/675Alpha1SecondaryA2 -1.064
 /h11b/675Alpha1SecondaryA4 0.180
+
+# 675-keV alpha-decay final-state generator
+# legacyLegendreA2A4        : previous sequential alpha+8Be(2+) + A2/A4 model
+# symmetrizedCoherentL1L3   : Kuhlwein-2022-inspired symmetrized coherent L=1/L=3 model
+/h11b/675AlphaDecayModel symmetrizedCoherentL1L3
+/h11b/675StrictL1Fraction 0.76
+/h11b/675StrictL13Phase 4.209734155810323
+/h11b/675StrictCoherentL13 true
+/h11b/675StrictPermutationSymmetrized true
+/h11b/675Strict8BeLambdaEnergyKeV 3037.0
+/h11b/675Strict8BeReducedWidthSquaredKeV 1075.0
+/h11b/675StrictWeightMaxSafetyFactor 3.0
+/h11b/675StrictWeightMaxScanCandidates 2000
+/h11b/675StrictMaxSamplingAttempts 10000
 
 /h11b/enable165GammaCapture true
 /h11b/enable675GammaCapture true

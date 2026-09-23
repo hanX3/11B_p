@@ -15,11 +15,21 @@ struct H11BCrossSectionComponents
 {
   G4double sigma_165_model = 0.;
   G4double sigma_675_model = 0.;
+  G4double sigma_165_total = 0.;
+  G4double sigma_675_total = 0.;
   G4double sigma_165 = 0.;
   G4double sigma_675 = 0.;
+  G4double sigma_165_directdecay = 0.;
+  G4double sigma_675_directdecay = 0.;
+  G4double sigma_directdecay = 0.;
+  // Backward-compatible alias for old analysis code.
   G4double sigma_background = 0.;
   G4double sigma_165_sampling = 0.;
   G4double sigma_675_sampling = 0.;
+  G4double sigma_165_directdecay_sampling = 0.;
+  G4double sigma_675_directdecay_sampling = 0.;
+  G4double sigma_directdecay_sampling = 0.;
+  // Backward-compatible alias for old analysis code.
   G4double sigma_background_sampling = 0.;
   G4double sigma_3alpha_sampling_total = 0.;
   G4double sigma_eval = 0.;
@@ -51,13 +61,16 @@ struct H11BCrossSectionComponents
   G4double sigma_total_sampling_all = 0.;
   G4double sigma_total_all = 0.;
   G4double cross_section_bias_factor = 1.;
-  G4double background_bias_factor = 1.;
-};
-
-enum class H11BEvaluatedCrossSectionMode
-{
-  Tentori2023,
-  Model
+  G4double direct_decay_fraction = 0.01;
+  G4double sequential_decay_fraction_165 = 0.99;
+  G4double sequential_decay_fraction_675 = 0.99;
+  G4double direct_decay_fraction_165 = 0.01;
+  G4double direct_decay_fraction_675 = 0.01;
+  G4double scale_factor_165 = 1.;
+  G4double scale_factor_675 = 1.;
+  G4bool enable_direct_decay = true;
+  // Backward-compatible alias for old analysis code.
+  G4double background_bias_factor = 0.01;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -72,25 +85,26 @@ public:
   G4double GetIsoCrossSection(const G4DynamicParticle* projectile, G4int z, G4int a, const G4Isotope*, const G4Element*, const G4Material*) override;
 
   static H11BCrossSectionComponents CalculateComponents(G4double kinetic_energy_lab);
-  static H11BEvaluatedCrossSectionMode GetEvaluatedCrossSectionMode();
-  static void SetEvaluatedCrossSectionMode(H11BEvaluatedCrossSectionMode mode);
-  static void SetEvaluatedCrossSectionMode(const G4String& mode);
-  static const char* GetEvaluatedCrossSectionModeName();
   static G4double GetCrossSectionBiasFactor();
   static void SetCrossSectionBiasFactor(G4double factor);
-  static G4double GetBackgroundBiasFactor();
-  static void SetBackgroundBiasFactor(G4double factor);
+  static G4double Get165SequentialDecayFraction();
+  static void Set165SequentialDecayFraction(G4double fraction);
+  static G4double Get675SequentialDecayFraction();
+  static void Set675SequentialDecayFraction(G4double fraction);
+  static G4bool GetDirectDecayEnabled();
+  static void SetDirectDecayEnabled(G4bool enabled);
+  static G4double Get165BWScaleFactor();
+  static void Set165BWScaleFactor(G4double factor);
+  static G4double Get675ScaleFactor();
+  static void Set675ScaleFactor(G4double factor);
 
 private:
   static G4double GetEcmValue(G4double project_a, G4double target_a, G4double kinetic_energy_lab_keV);
   static G4double GetSigma165(G4double energy_cm_keV);
-  static G4double GetSigma675(G4double energy_cm_keV);
   static G4double Get165Gamma0CrossSection(G4double energy_cm_keV);
   static G4double Get165Gamma1CrossSection(G4double energy_cm_keV);
   static G4double Get675GammaTotalCrossSection(G4double sigma_675_model);
-  static G4double GetEvaluatedTotalCrossSection(G4double kinetic_energy_lab);
-  static G4double GetTentori2023TotalCrossSection(G4double energy_cm_MeV);
-  static G4double GetSigmaFromSFactor(G4double energy_cm_MeV, G4double s_factor_MeV_b);
+  static G4double GetFit675CrossSection(G4double kinetic_energy_lab);
   static G4double GetSigmaBreitWigner(G4double energy_cm_keV, G4double resonance_energy, G4double total_width, G4double entrance_width_at_resonance, G4double exit_width_at_resonance, G4double spin_stat_factor, G4int entrance_orbital_l);
   static G4double GetFullCoulombEntranceWidth(G4double energy_cm_keV, G4double resonance_energy, G4double entrance_width_at_resonance, G4int entrance_orbital_l);
 };

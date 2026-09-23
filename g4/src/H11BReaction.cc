@@ -19,11 +19,16 @@
 #include "G4Threading.hh"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <complex>
 #include <cstdio>
+#include <initializer_list>
 #include <iterator>
 #include <map>
 #include <limits>
+#include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -49,6 +54,295 @@ struct H11BGammaLine
   G4bool is_upper_limit;
   const char* label;
 };
+
+struct ThreeAlphaCandidate
+{
+  std::array<G4LorentzVector, 3> lv_cm_alpha;
+  std::array<G4LorentzVector, 3> lv_lab_alpha;
+};
+
+struct H11B675StrictSample
+{
+  ThreeAlphaCandidate candidate;
+  G4double weight = 0.0;
+  G4double weight_max = 1.0;
+  G4int attempts = 0;
+};
+
+constexpr G4int DirectDecayPhaseSpaceModeForOutput = 2;
+
+G4double InvariantMass(const G4LorentzVector& lv)
+{
+  return std::sqrt(std::max(0.0, lv.e() * lv.e() - lv.vect().mag2()));
+}
+
+G4double Factorial(G4int n)
+{
+  if (n < 0) {
+    return 0.0;
+  }
+
+  G4double result = 1.0;
+  for (G4int i = 2; i <= n; ++i) {
+    result *= static_cast<G4double>(i);
+  }
+
+  return result;
+}
+
+G4bool ValidFactorialArgs(std::initializer_list<G4int> values)
+{
+  for (const auto value : values) {
+    if (value < 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+G4double AssociatedLegendre(G4int l, G4int m, G4double x)
+{
+  if (m < 0 || m > l) {
+    return 0.0;
+  }
+
+  x = std::clamp(x, -1.0, 1.0);
+  G4double pmm = 1.0;
+  if (m > 0) {
+    const G4double somx2 = std::sqrt(std::max(0.0, (1.0 - x) * (1.0 + x)));
+    G4double fact = 1.0;
+    for (G4int i = 1; i <= m; ++i) {
+      pmm *= -fact * somx2;
+      fact += 2.0;
+    }
+  }
+
+  if (l == m) {
+    return pmm;
+  }
+
+  G4double pmmp1 = x * (2.0 * m + 1.0) * pmm;
+  if (l == m + 1) {
+    return pmmp1;
+  }
+
+  G4double pll = 0.0;
+  for (G4int ll = m + 2; ll <= l; ++ll) {
+    pll = ((2.0 * ll - 1.0) * x * pmmp1 - (ll + m - 1.0) * pmm) / (ll - m);
+    pmm = pmmp1;
+    pmmp1 = pll;
+  }
+
+  return pll;
+}
+
+std::complex<G4double> SphericalHarmonic(G4int l, G4int m, const G4ThreeVector& direction)
+{
+  if (direction.mag2() <= 0.0 || std::abs(m) > l) {
+    return {0.0, 0.0};
+  }
+
+  if (m < 0) {
+    const G4int mp = -m;
+    const auto y_pos = SphericalHarmonic(l, mp, direction);
+    return (mp % 2 == 0 ? 1.0 : -1.0) * std::conj(y_pos);
+  }
+
+  const G4ThreeVector unit = direction.unit();
+  const G4double x = std::clamp(unit.z(), -1.0, 1.0);
+  const G4double phi = std::atan2(unit.y(), unit.x());
+  const G4double norm = std::sqrt((2.0 * l + 1.0) / (4.0 * pi) * Factorial(l - m) / Factorial(l + m));
+  const G4double plm = AssociatedLegendre(l, m, x);
+  return norm * plm * std::polar(1.0, static_cast<G4double>(m) * phi);
+}
+
+G4double ClebschGordan(G4int j1, G4int m1, G4int j2, G4int m2, G4int j, G4int m)
+{
+  if (m != m1 + m2) {
+    return 0.0;
+  }
+  if (std::abs(m1) > j1 || std::abs(m2) > j2 || std::abs(m) > j) {
+    return 0.0;
+  }
+  if (j < std::abs(j1 - j2) || j > j1 + j2) {
+    return 0.0;
+  }
+
+  if (!ValidFactorialArgs({j1 + j2 - j, j1 - j2 + j, -j1 + j2 + j, j1 + j2 + j + 1,
+                           j1 - m1, j1 + m1, j2 - m2, j2 + m2, j - m, j + m})) {
+    return 0.0;
+  }
+
+  const G4double prefactor = std::sqrt((2.0 * j + 1.0) *
+                                       Factorial(j1 + j2 - j) * Factorial(j1 - j2 + j) * Factorial(-j1 + j2 + j) /
+                                       Factorial(j1 + j2 + j + 1) *
+                                       Factorial(j1 + m1) * Factorial(j1 - m1) *
+                                       Factorial(j2 + m2) * Factorial(j2 - m2) *
+                                       Factorial(j + m) * Factorial(j - m));
+
+  G4double sum = 0.0;
+  for (G4int k = 0; k <= 20; ++k) {
+    const G4int a1 = k;
+    const G4int a2 = j1 + j2 - j - k;
+    const G4int a3 = j1 - m1 - k;
+    const G4int a4 = j2 + m2 - k;
+    const G4int a5 = j - j2 + m1 + k;
+    const G4int a6 = j - j1 - m2 + k;
+    if (!ValidFactorialArgs({a1, a2, a3, a4, a5, a6})) {
+      continue;
+    }
+
+    const G4double term = (k % 2 == 0 ? 1.0 : -1.0) /
+                          (Factorial(a1) * Factorial(a2) * Factorial(a3) *
+                           Factorial(a4) * Factorial(a5) * Factorial(a6));
+    sum += term;
+  }
+
+  return prefactor * sum;
+}
+
+std::complex<G4double> EightBe2PlusAmplitude(G4double eaa)
+{
+  if (eaa <= 0.0 || H11BConfig::Get675Strict8BeLambdaEnergy() <= 0.0 ||
+      H11BConfig::Get675Strict8BeReducedWidthSquared() <= 0.0) {
+    return {0.0, 0.0};
+  }
+
+  const G4double lambda_energy = H11BConfig::Get675Strict8BeLambdaEnergy();
+  const G4double gamma_reduced_squared = H11BConfig::Get675Strict8BeReducedWidthSquared();
+  const G4double penetrability_ratio = CoulombPenetrability::AlphaAlphaL2Ratio(eaa / keV, lambda_energy / keV);
+  const G4double gamma_e = std::max(0.0, 2.0 * gamma_reduced_squared * penetrability_ratio);
+
+  if (gamma_e <= 0.0) {
+    return {0.0, 0.0};
+  }
+
+  const std::complex<G4double> denominator(lambda_energy - eaa, -0.5 * gamma_e);
+  return std::sqrt(gamma_e) / denominator;
+}
+
+G4double PrimaryAlpha8BePenetrabilityAmplitude(G4double e_alpha8be, G4double e_alpha8be_ref, G4int orbital_l)
+{
+  if (e_alpha8be <= 0.0 || e_alpha8be_ref <= 0.0) {
+    return 0.0;
+  }
+
+  const G4double ratio = CoulombPenetrability::Alpha8BeRatio(e_alpha8be / keV, e_alpha8be_ref / keV, orbital_l);
+  return std::sqrt(std::max(0.0, ratio));
+}
+
+std::complex<G4double> H11B675PermutationAmplitude(const std::array<G4LorentzVector, 3>& alpha_cm,
+                                                   G4int primary_index,
+                                                   G4int pair_first_index,
+                                                   G4int pair_second_index,
+                                                   G4int parent_m,
+                                                   G4int primary_l,
+                                                   G4double sqrt_s,
+                                                   G4double m_alpha)
+{
+  const auto pair = alpha_cm[pair_first_index] + alpha_cm[pair_second_index];
+  const G4double pair_mass = InvariantMass(pair);
+  const G4double eaa = pair_mass - 2.0 * m_alpha;
+  const G4double e_alpha8be = sqrt_s - m_alpha - pair_mass;
+  const G4double pair_mass_ref = 2.0 * m_alpha + H11BConfig::Get675Strict8BeLambdaEnergy();
+  const G4double e_alpha8be_ref = sqrt_s - m_alpha - pair_mass_ref;
+
+  const G4double primary_penetrability = PrimaryAlpha8BePenetrabilityAmplitude(e_alpha8be, e_alpha8be_ref, primary_l);
+  const auto eight_be_amplitude = EightBe2PlusAmplitude(eaa);
+  if (primary_penetrability <= 0.0 || std::norm(eight_be_amplitude) <= 0.0) {
+    return {0.0, 0.0};
+  }
+
+  G4LorentzVector pair_first_in_pair_cm = alpha_cm[pair_first_index];
+  pair_first_in_pair_cm.boost(-pair.boostVector());
+
+  std::complex<G4double> angular_sum(0.0, 0.0);
+  constexpr G4int parent_j = 2;
+  constexpr G4int intermediate_j = 2;
+  constexpr G4int secondary_l = 2;
+
+  for (G4int intermediate_m = -intermediate_j; intermediate_m <= intermediate_j; ++intermediate_m) {
+    const G4int primary_m = parent_m - intermediate_m;
+    if (std::abs(primary_m) > primary_l) {
+      continue;
+    }
+
+    const G4double cg = ClebschGordan(intermediate_j, intermediate_m, primary_l, primary_m, parent_j, parent_m);
+    if (cg == 0.0) {
+      continue;
+    }
+
+    const auto y_primary = SphericalHarmonic(primary_l, primary_m, alpha_cm[primary_index].vect());
+    const auto y_secondary = SphericalHarmonic(secondary_l, intermediate_m, pair_first_in_pair_cm.vect());
+    angular_sum += cg * y_primary * y_secondary;
+  }
+
+  return primary_penetrability * eight_be_amplitude * angular_sum;
+}
+
+G4double H11B675StrictWeight(const std::array<G4LorentzVector, 3>& alpha_cm,
+                             G4double sqrt_s,
+                             G4double m_alpha)
+{
+  const G4double k = std::clamp(H11BConfig::Get675StrictL1Fraction(), 0.0, 1.0);
+  const G4double l1_amplitude_scale = std::sqrt(k);
+  const G4double l3_amplitude_scale = std::sqrt(std::max(0.0, 1.0 - k));
+  const std::complex<G4double> phase_l13 = std::polar(1.0, H11BConfig::Get675StrictL13Phase());
+  const std::array<std::array<G4int, 3>, 3> permutations = {{{0, 1, 2}, {1, 2, 0}, {2, 0, 1}}};
+  const G4int n_permutations = H11BConfig::Get675StrictPermutationSymmetrized() ? 3 : 1;
+
+  G4double weight = 0.0;
+  constexpr G4int parent_j = 2;
+  for (G4int parent_m = -parent_j; parent_m <= parent_j; ++parent_m) {
+    std::complex<G4double> coherent_total(0.0, 0.0);
+    std::complex<G4double> l1_total(0.0, 0.0);
+    std::complex<G4double> l3_total(0.0, 0.0);
+
+    for (G4int ip = 0; ip < n_permutations; ++ip) {
+      const auto& perm = permutations[ip];
+      const auto amp_l1 = H11B675PermutationAmplitude(alpha_cm,
+                                                      perm[0],
+                                                      perm[1],
+                                                      perm[2],
+                                                      parent_m,
+                                                      H11B675Alpha1ExitOrbitalL1,
+                                                      sqrt_s,
+                                                      m_alpha);
+      const auto amp_l3 = H11B675PermutationAmplitude(alpha_cm,
+                                                      perm[0],
+                                                      perm[1],
+                                                      perm[2],
+                                                      parent_m,
+                                                      H11B675Alpha1ExitOrbitalL3,
+                                                      sqrt_s,
+                                                      m_alpha);
+      l1_total += amp_l1;
+      l3_total += amp_l3;
+      coherent_total += l1_amplitude_scale * amp_l1 + l3_amplitude_scale * phase_l13 * amp_l3;
+    }
+
+    if (H11BConfig::Get675StrictCoherentL13()) {
+      weight += std::norm(coherent_total);
+    } else {
+      weight += k * std::norm(l1_total) + (1.0 - k) * std::norm(l3_total);
+    }
+  }
+
+  return std::max(0.0, weight / (2.0 * parent_j + 1.0));
+}
+
+std::string H11B675StrictWeightCacheKey(G4double sqrt_s, G4double m_alpha)
+{
+  std::ostringstream key;
+  key << static_cast<G4int>((sqrt_s - 3.0 * m_alpha) / keV + 0.5) << '_'
+      << H11BConfig::Get675StrictL1Fraction() << '_'
+      << H11BConfig::Get675StrictL13Phase() << '_'
+      << H11BConfig::Get675StrictCoherentL13() << '_'
+      << H11BConfig::Get675StrictPermutationSymmetrized() << '_'
+      << H11BConfig::Get675Strict8BeLambdaEnergy() / keV << '_'
+      << H11BConfig::Get675Strict8BeReducedWidthSquared() / keV;
+  return key.str();
+}
 
 constexpr H11BGammaLine kH11B675GammaRelativeLines[] = {{H11BGammaBranch::Gamma675ToGroundState, C12LevelGround, 15.7, 1.6, false, "toGround"}, {H11BGammaBranch::Gamma675To4439State, C12Level4439, 100.0, 0.0, false, "to4439"}, {H11BGammaBranch::Gamma675To7654State, C12Level7654, 0.07, 0.0, true, "to7654UpperLimit"}, {H11BGammaBranch::Gamma675To12710State, C12Level12710, 6.8, 0.4, false, "to12710"}, {H11BGammaBranch::Gamma675To15110State, C12Level15110, 0.16, 0.03, false, "to15110"}};
 
@@ -166,18 +460,38 @@ void FillCrossSectionDiagnostics(H11BReactionData& data, const H11BCrossSectionC
   data.sigma_eval_b = components.sigma_eval / barn;
   data.sigma_165_model_b = components.sigma_165_model / barn;
   data.sigma_675_model_b = components.sigma_675_model / barn;
+  data.sigma_165_total_b = components.sigma_165_total / barn;
+  data.sigma_675_total_b = components.sigma_675_total / barn;
   data.sigma_165_used_b = components.sigma_165 / barn;
   data.sigma_675_used_b = components.sigma_675 / barn;
   data.sigma_total_used_b = components.sigma_total / barn;
   data.sigma_165_sampling_b = components.sigma_165_sampling / barn;
   data.sigma_675_sampling_b = components.sigma_675_sampling / barn;
+  data.sigma_165_directdecay_sampling_b = components.sigma_165_directdecay_sampling / barn;
+  data.sigma_675_directdecay_sampling_b = components.sigma_675_directdecay_sampling / barn;
   data.sigma_background_sampling_b = components.sigma_background_sampling / barn;
+  data.sigma_directdecay_sampling_b = components.sigma_directdecay_sampling / barn;
   data.sigma_3alpha_sampling_total_b = components.sigma_3alpha_sampling_total / barn;
   data.sigma_model_sum_b = (components.sigma_165_model + components.sigma_675_model) / barn;
-  data.model_scale_factor = data.sigma_model_sum_b > 0.0 ? (components.sigma_165 + components.sigma_675) / (components.sigma_165_model + components.sigma_675_model) : 1.0;
+  data.model_scale_factor = components.scale_factor_165;
   data.cross_section_bias_factor = components.cross_section_bias_factor;
+  // Fill for every event, not just gamma-capture ones: sigma_gamma_*_sampling_b
+  // already folds this factor in for every channel, so the diagnostic branch
+  // must match instead of staying at the H11BReactionData default of 1.0.
+  data.gamma_bias_factor = H11BConfig::GetGammaBiasFactor();
   data.background_bias_factor = components.background_bias_factor;
+  data.direct_decay_fraction = components.direct_decay_fraction;
+  data.sequential_decay_fraction_165 = components.sequential_decay_fraction_165;
+  data.sequential_decay_fraction_675 = components.sequential_decay_fraction_675;
+  data.direct_decay_fraction_165 = components.direct_decay_fraction_165;
+  data.direct_decay_fraction_675 = components.direct_decay_fraction_675;
+  data.enable_direct_decay = components.enable_direct_decay ? 1 : 0;
+  data.scale_factor_165 = components.scale_factor_165;
+  data.scale_factor_675 = components.scale_factor_675;
   data.sigma_background_b = components.sigma_background / barn;
+  data.sigma_165_directdecay_b = components.sigma_165_directdecay / barn;
+  data.sigma_675_directdecay_b = components.sigma_675_directdecay / barn;
+  data.sigma_directdecay_b = components.sigma_directdecay / barn;
   data.sigma_3alpha_eval_b = components.sigma_eval / barn;
   data.sigma_gamma_165_0_b = components.sigma_gamma_165_0 / barn;
   data.sigma_gamma_165_1_b = components.sigma_gamma_165_1 / barn;
@@ -209,6 +523,9 @@ void FillCrossSectionDiagnostics(H11BReactionData& data, const H11BCrossSectionC
     data.channel_probability_165 = components.sigma_165 / components.sigma_total;
     data.channel_probability_675 = components.sigma_675 / components.sigma_total;
     data.channel_probability_background = components.sigma_background / components.sigma_total;
+    data.channel_probability_directdecay = components.sigma_directdecay / components.sigma_total;
+    data.channel_probability_directdecay_165 = components.sigma_165_directdecay / components.sigma_total;
+    data.channel_probability_directdecay_675 = components.sigma_675_directdecay / components.sigma_total;
   }
 
   if (components.sigma_total_sampling_all > 0.) {
@@ -234,6 +551,13 @@ void FillRuntimeConfigDiagnostics(H11BReactionData& data)
   data.a2_675_primary = H11BConfig::Get675PrimaryAngularA2();
   data.enable_675_alpha1_secondary_angular_correlation =
     H11BConfig::GetEnable675Alpha1SecondaryAngularCorrelation() ? 1 : 0;
+  data.h11b675_alpha_decay_model = static_cast<G4int>(H11BConfig::Get675AlphaDecayModel());
+  data.h11b675_strict_coherent_l13 = H11BConfig::Get675StrictCoherentL13() ? 1 : 0;
+  data.h11b675_strict_permutation_symmetrized = H11BConfig::Get675StrictPermutationSymmetrized() ? 1 : 0;
+  data.h11b675_strict_l1_fraction = H11BConfig::Get675StrictL1Fraction();
+  data.h11b675_strict_l13_phase = H11BConfig::Get675StrictL13Phase();
+  data.h11b675_strict_8be_lambda_energy_keV = H11BConfig::Get675Strict8BeLambdaEnergy() / keV;
+  data.h11b675_strict_8be_reduced_width_squared_keV = H11BConfig::Get675Strict8BeReducedWidthSquared() / keV;
   data.enable_675_gamma_angular_distribution = H11BConfig::GetEnable675GammaAngularDistribution() ? 1 : 0;
   data.a1_675_gamma = H11BConfig::Get675GammaAngularA1();
   data.a2_675_gamma = H11BConfig::Get675GammaAngularA2();
@@ -246,8 +570,8 @@ G4double ReactionChannelPhysicalWeight(H11BReaction::ReactionChannel channel, co
     return components.sigma_165;
   case H11BReaction::ReactionChannel::Resonance675:
     return components.sigma_675;
-  case H11BReaction::ReactionChannel::Background3Alpha:
-    return components.sigma_background;
+  case H11BReaction::ReactionChannel::DirectDecay3Alpha:
+    return components.sigma_directdecay;
   case H11BReaction::ReactionChannel::GammaCapture12C:
     return components.sigma_gamma_sampling_total > 0.0 ? components.sigma_gamma_total_physical : 0.0;
   }
@@ -262,8 +586,8 @@ G4double ReactionChannelSamplingWeight(H11BReaction::ReactionChannel channel, co
     return components.sigma_165_sampling;
   case H11BReaction::ReactionChannel::Resonance675:
     return components.sigma_675_sampling;
-  case H11BReaction::ReactionChannel::Background3Alpha:
-    return components.sigma_background_sampling;
+  case H11BReaction::ReactionChannel::DirectDecay3Alpha:
+    return components.sigma_directdecay_sampling;
   case H11BReaction::ReactionChannel::GammaCapture12C:
     return components.sigma_gamma_sampling_total;
   }
@@ -302,8 +626,6 @@ G4double GammaBranchWeight(H11BGammaBranch branch, const H11BCrossSectionCompone
   return 0.0;
 }
 
-H11BReaction::BackgroundMode g_background_mode = H11BReaction::BackgroundMode::PhaseSpace;
-
 H11BGammaBranch Select675GammaBranch()
 {
   return Sample675GammaRelativeLine();
@@ -324,61 +646,99 @@ H11BReaction::H11BReaction()
 H11BReaction::~H11BReaction() {}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-H11BReaction::BackgroundMode H11BReaction::GetBackgroundMode()
-{
-  return g_background_mode;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void H11BReaction::SetBackgroundMode(BackgroundMode mode)
-{
-  g_background_mode = mode;
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void H11BReaction::SetBackgroundMode(const G4String& mode)
-{
-  if (mode == "phaseSpace") {
-    SetBackgroundMode(BackgroundMode::PhaseSpace);
-  } else {
-    G4cerr << "Unknown /h11b/backgroundMode '" << mode << "'. Current version only supports phaseSpace." << G4endl;
-  }
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-const char* H11BReaction::GetBackgroundModeName()
-{
-  switch (g_background_mode) {
-  case BackgroundMode::PhaseSpace:
-    return "phaseSpace";
-  }
-
-  return "unknown";
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void H11BReaction::SetEvaluatedCrossSectionModeCommand(const G4String& mode)
-{
-  H11BCrossSection::SetEvaluatedCrossSectionMode(mode);
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void H11BReaction::SetCrossSectionBiasFactorCommand(G4double factor)
 {
   H11BCrossSection::SetCrossSectionBiasFactor(factor);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void H11BReaction::SetBackgroundBiasFactorCommand(G4double factor)
+void H11BReaction::Set165SequentialDecayFractionCommand(G4double fraction)
 {
-  H11BCrossSection::SetBackgroundBiasFactor(factor);
+  H11BCrossSection::Set165SequentialDecayFraction(fraction);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void H11BReaction::SetBackgroundModeCommand(const G4String& mode)
+void H11BReaction::Set675SequentialDecayFractionCommand(G4double fraction)
 {
-  SetBackgroundMode(mode);
+  H11BCrossSection::Set675SequentialDecayFraction(fraction);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::SetDirectDecayEnabledCommand(G4bool enabled)
+{
+  H11BCrossSection::SetDirectDecayEnabled(enabled);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set165BWScaleFactorCommand(G4double factor)
+{
+  H11BCrossSection::Set165BWScaleFactor(factor);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675ScaleFactorCommand(G4double factor)
+{
+  H11BCrossSection::Set675ScaleFactor(factor);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675AlphaDecayModelCommand(const G4String& model)
+{
+  H11BConfig::Set675AlphaDecayModel(model);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675StrictL1FractionCommand(G4double value)
+{
+  H11BConfig::Set675StrictL1Fraction(value);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675StrictL13PhaseCommand(G4double value)
+{
+  H11BConfig::Set675StrictL13Phase(value);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675StrictCoherentL13Command(G4bool enabled)
+{
+  H11BConfig::Set675StrictCoherentL13(enabled);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675StrictPermutationSymmetrizedCommand(G4bool enabled)
+{
+  H11BConfig::Set675StrictPermutationSymmetrized(enabled);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675Strict8BeLambdaEnergyCommand(G4double value)
+{
+  H11BConfig::Set675Strict8BeLambdaEnergy(value * keV);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675Strict8BeReducedWidthSquaredCommand(G4double value)
+{
+  H11BConfig::Set675Strict8BeReducedWidthSquared(value * keV);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675StrictWeightMaxSafetyFactorCommand(G4double value)
+{
+  H11BConfig::Set675StrictWeightMaxSafetyFactor(value);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675StrictWeightMaxScanCandidatesCommand(G4int value)
+{
+  H11BConfig::Set675StrictWeightMaxScanCandidates(value);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Set675StrictMaxSamplingAttemptsCommand(G4int value)
+{
+  H11BConfig::Set675StrictMaxSamplingAttempts(value);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -515,10 +875,14 @@ void H11BReaction::PrintConfigCommand()
   }
 
   G4cout << "H11B reaction configuration" << G4endl
-         << "  evaluatedCrossSection        = " << H11BCrossSection::GetEvaluatedCrossSectionModeName() << G4endl
          << "  crossSectionBiasFactor       = " << H11BCrossSection::GetCrossSectionBiasFactor() << G4endl
-         << "  backgroundBiasFactor         = " << H11BCrossSection::GetBackgroundBiasFactor() << G4endl
-         << "  backgroundMode               = " << GetBackgroundModeName() << G4endl
+         << "  165BWScaleFactor             = " << H11BCrossSection::Get165BWScaleFactor() << G4endl
+         << "  675ScaleFactor               = " << H11BCrossSection::Get675ScaleFactor() << G4endl
+         << "  enableDirectDecay            = " << (H11BCrossSection::GetDirectDecayEnabled() ? "true" : "false") << G4endl
+         << "  165SequentialDecayFraction   = " << H11BCrossSection::Get165SequentialDecayFraction() << G4endl
+         << "  165DirectDecayFraction       = " << 1.0 - H11BCrossSection::Get165SequentialDecayFraction() << G4endl
+         << "  675SequentialDecayFraction   = " << H11BCrossSection::Get675SequentialDecayFraction() << G4endl
+         << "  675DirectDecayFraction       = " << 1.0 - H11BCrossSection::Get675SequentialDecayFraction() << G4endl
          << G4endl
          << "  165 primary alpha angular distribution" << G4endl
          << "    enable = " << (H11BConfig::GetEnable165PrimaryAngularDistribution() ? "true" : "false") << G4endl
@@ -541,6 +905,16 @@ void H11BReaction::PrintConfigCommand()
          << "    enable = " << (H11BConfig::GetEnable675Alpha1SecondaryAngularCorrelation() ? "true" : "false") << G4endl
          << "    a2     = " << H11BConfig::Get675Alpha1SecondaryA2() << G4endl
          << "    a4     = " << H11BConfig::Get675Alpha1SecondaryA4() << G4endl
+         << "  675 alpha decay model" << G4endl
+         << "    model                  = " << H11BConfig::Get675AlphaDecayModelName() << G4endl
+         << "    strictL1Fraction       = " << H11BConfig::Get675StrictL1Fraction() << G4endl
+         << "    strictL13Phase         = " << H11BConfig::Get675StrictL13Phase() << G4endl
+         << "    strictCoherentL13      = " << (H11BConfig::Get675StrictCoherentL13() ? "true" : "false") << G4endl
+         << "    strictPermutationSym   = " << (H11BConfig::Get675StrictPermutationSymmetrized() ? "true" : "false") << G4endl
+         << "    strict8BeLambdaEnergy  = " << H11BConfig::Get675Strict8BeLambdaEnergy() / keV << " keV" << G4endl
+         << "    strict8BeGamma2        = " << H11BConfig::Get675Strict8BeReducedWidthSquared() / keV << " keV" << G4endl
+         << "    strictWeightMaxScan    = " << H11BConfig::Get675StrictWeightMaxScanCandidates() << G4endl
+         << "    strictMaxAttempts      = " << H11BConfig::Get675StrictMaxSamplingAttempts() << G4endl
          << "  675Alpha0Width               = 0 keV (parity forbidden)" << G4endl
          << G4endl
          << "  enable165GammaCapture        = " << (H11BConfig::Get165GammaCaptureEnabled() ? "true" : "false") << G4endl
@@ -558,14 +932,16 @@ void H11BReaction::DefineCommands()
 {
   messenger = std::make_unique<G4GenericMessenger>(this, "/h11b/", "p + 11B reaction controls");
 
-  auto& background_mode_cmd = messenger->DeclareMethod("backgroundMode", &H11BReaction::SetBackgroundModeCommand, "Set background 3-alpha mode");
-  background_mode_cmd.SetCandidates("phaseSpace");
-
-  messenger->DeclareMethod("backgroundBiasFactor", &H11BReaction::SetBackgroundBiasFactorCommand,
-                           "Set background phase-space sampling bias factor (>= 0; 1 disables biasing)");
-
-  auto& xs_mode_cmd = messenger->DeclareMethod("evaluatedCrossSection", &H11BReaction::SetEvaluatedCrossSectionModeCommand, "Set evaluated total cross section");
-  xs_mode_cmd.SetCandidates("tentori2023 model");
+  messenger->DeclareMethod("enableDirectDecay", &H11BReaction::SetDirectDecayEnabledCommand,
+                           "Enable direct-decay phase-space 3-alpha component");
+  messenger->DeclareMethod("165SequentialDecayFraction", &H11BReaction::Set165SequentialDecayFractionCommand,
+                           "Set sequential-decay fraction within the 165-keV 3-alpha resonance branch [0, 1]");
+  messenger->DeclareMethod("675SequentialDecayFraction", &H11BReaction::Set675SequentialDecayFractionCommand,
+                           "Set sequential-decay fraction within the 675-keV 3-alpha resonance branch [0, 1]");
+  messenger->DeclareMethod("165BWScaleFactor", &H11BReaction::Set165BWScaleFactorCommand,
+                           "Scale the 165-keV BW allocation component (>= 0)");
+  messenger->DeclareMethod("675ScaleFactor", &H11BReaction::Set675ScaleFactorCommand,
+                           "Scale the fit675 component (>= 0)");
 
   messenger->DeclareMethod("crossSectionBiasFactor", &H11BReaction::SetCrossSectionBiasFactorCommand, "Set p + 11B cross-section sampling bias factor (>= 1)");
 
@@ -576,6 +952,18 @@ void H11BReaction::DefineCommands()
   messenger->DeclareMethod("enable675Alpha1SecondaryAngularCorrelation", &H11BReaction::SetEnable675Alpha1SecondaryAngularCorrelationCommand, "Enable 675-keV alpha1 secondary A2/A4 angular correlation");
   messenger->DeclareMethod("675Alpha1SecondaryA2", &H11BReaction::Set675Alpha1SecondaryA2Command, "Set 675-keV alpha1 secondary A2 coefficient");
   messenger->DeclareMethod("675Alpha1SecondaryA4", &H11BReaction::Set675Alpha1SecondaryA4Command, "Set 675-keV alpha1 secondary A4 coefficient");
+
+  auto& alpha675_model_cmd = messenger->DeclareMethod("675AlphaDecayModel", &H11BReaction::Set675AlphaDecayModelCommand, "Set 675-keV alpha decay model");
+  alpha675_model_cmd.SetCandidates("legacyLegendreA2A4 symmetrizedCoherentL1L3 legacy strict coherentL1L3");
+  messenger->DeclareMethod("675StrictL1Fraction", &H11BReaction::Set675StrictL1FractionCommand, "Set strict 675-keV L=1 intensity fraction in [0,1]");
+  messenger->DeclareMethod("675StrictL13Phase", &H11BReaction::Set675StrictL13PhaseCommand, "Set strict 675-keV L=1/L=3 relative phase in radians");
+  messenger->DeclareMethod("675StrictCoherentL13", &H11BReaction::Set675StrictCoherentL13Command, "Enable coherent L=1/L=3 interference in strict 675-keV alpha model");
+  messenger->DeclareMethod("675StrictPermutationSymmetrized", &H11BReaction::Set675StrictPermutationSymmetrizedCommand, "Enable three-alpha permutation symmetrization in strict 675-keV alpha model");
+  messenger->DeclareMethod("675Strict8BeLambdaEnergyKeV", &H11BReaction::Set675Strict8BeLambdaEnergyCommand, "Set strict 8Be(2+) R-matrix pole energy above 2-alpha threshold, in keV");
+  messenger->DeclareMethod("675Strict8BeReducedWidthSquaredKeV", &H11BReaction::Set675Strict8BeReducedWidthSquaredCommand, "Set strict 8Be(2+) reduced width squared, in keV");
+  messenger->DeclareMethod("675StrictWeightMaxSafetyFactor", &H11BReaction::Set675StrictWeightMaxSafetyFactorCommand, "Set strict rejection-sampling maximum-weight safety factor");
+  messenger->DeclareMethod("675StrictWeightMaxScanCandidates", &H11BReaction::Set675StrictWeightMaxScanCandidatesCommand, "Set number of candidates used to estimate strict-model maximum weight");
+  messenger->DeclareMethod("675StrictMaxSamplingAttempts", &H11BReaction::Set675StrictMaxSamplingAttemptsCommand, "Set max rejection-sampling attempts for strict 675-keV alpha model");
 
   messenger->DeclareMethod("enable165PrimaryAngularDistribution", &H11BReaction::SetEnable165PrimaryAngularDistributionCommand, "Enable 165-keV primary alpha A1/A2 angular distribution");
   messenger->DeclareMethod("165PrimaryAngularA1", &H11BReaction::Set165PrimaryAngularA1Command, "Set 165-keV primary alpha A1 coefficient");
@@ -646,8 +1034,10 @@ G4bool H11BReaction::SelectReactionChannel(G4double kinetic_energy_lab)
       reaction_channel = ReactionChannel::Resonance675;
       resonance_type = Resonance675;
     } else {
-      reaction_channel = ReactionChannel::Background3Alpha;
-      resonance_type = Resonance675;
+      reaction_channel = ReactionChannel::DirectDecay3Alpha;
+      const G4double sampled_direct = G4UniformRand() * selected_components.sigma_directdecay_sampling;
+      resonance_type =
+        sampled_direct < selected_components.sigma_165_directdecay_sampling ? Resonance165 : Resonance675;
     }
     return true;
   }
@@ -691,7 +1081,7 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
   G4double sqrt_s = std::sqrt(s);
   G4double ex_max = std::max(0., sqrt_s - m_4He - m_8Be);
 
-  if (reaction_channel == ReactionChannel::Background3Alpha) {
+  if (reaction_channel == ReactionChannel::DirectDecay3Alpha) {
     GenerateThreeBodyPhaseSpace(projectile, target, product1, product2, product3);
     return;
   }
@@ -705,6 +1095,12 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
     is_alpha0_branch = true;
   else
     is_alpha1_branch = true;
+
+  if (is_alpha1_branch && resonance_type == Resonance675 &&
+      H11BConfig::Get675AlphaDecayModel() == H11B675AlphaDecayModel::SymmetrizedCoherentL1L3) {
+    Generate675SymmetrizedCoherent3Alpha(projectile, target, product1, product2, product3);
+    return;
+  }
 
   if (is_alpha1_branch) {
     ex_8Be = Sample8Be2PlusExcitationEnergy(ex_max);
@@ -947,10 +1343,10 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
   reaction_data.phi_lab_alpha1 = lv_lab_alpha1.phi();
   reaction_data.phi_lab_alpha2 = lv_lab_alpha2.phi();
   reaction_data.phi_lab_alpha3 = lv_lab_alpha3.phi();
-  reaction_data.resonance_id = reaction_channel == ReactionChannel::Background3Alpha ? 0 : (resonance_type == Resonance675 ? 675 : 165);
+  reaction_data.resonance_id = resonance_type == Resonance675 ? 675 : 165;
   reaction_data.branch_id = is_alpha1_branch ? 1 : 0;
   reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
-  reaction_data.background_mode = static_cast<G4int>(g_background_mode);
+  reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
   reaction_data.e_cm_p11B = sqrt_s - m_projectile - m_target;
   reaction_data.projectile_kinetic_lab = kinetic_lab_projectile;
   reaction_data.projectile_px_lab = lv_lab_projectile.px();
@@ -1006,21 +1402,6 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
   reaction_data.z = reaction_position.z();
   FillCrossSectionDiagnostics(reaction_data, selected_components);
   FillRuntimeConfigDiagnostics(reaction_data);
-  reaction_data.sigma_eval_b = selected_components.sigma_eval / barn;
-  reaction_data.sigma_165_model_b = selected_components.sigma_165_model / barn;
-  reaction_data.sigma_675_model_b = selected_components.sigma_675_model / barn;
-  reaction_data.sigma_165_used_b = selected_components.sigma_165 / barn;
-  reaction_data.sigma_675_used_b = selected_components.sigma_675 / barn;
-  reaction_data.sigma_total_used_b = selected_components.sigma_total / barn;
-  reaction_data.sigma_model_sum_b = (selected_components.sigma_165_model + selected_components.sigma_675_model) / barn;
-  reaction_data.model_scale_factor = reaction_data.sigma_model_sum_b > 0.0 ? (selected_components.sigma_165 + selected_components.sigma_675) / (selected_components.sigma_165_model + selected_components.sigma_675_model) : 1.0;
-  reaction_data.sigma_background_b = selected_components.sigma_background / barn;
-  if (selected_components.sigma_total > 0.) {
-    reaction_data.channel_probability_165 = selected_components.sigma_165 / selected_components.sigma_total;
-    reaction_data.channel_probability_675 = selected_components.sigma_675 / selected_components.sigma_total;
-    reaction_data.channel_probability_background = selected_components.sigma_background / selected_components.sigma_total;
-  }
-
   if (resonance_type == Resonance675 && is_alpha1_branch) {
     std::snprintf(reaction_data.reaction, sizeof(reaction_data.reaction), "%s_alpha1_%s", GetResonanceName(), H11BConfig::Get675Alpha1SecondaryAngularCorrelationName());
   } else if (is_alpha1_branch) {
@@ -1030,6 +1411,237 @@ void H11BReaction::ReactionKinematic(const G4HadProjectile& projectile, G4Partic
   } else {
     // gamma
   }
+
+  RunAction* run_action = static_cast<RunAction*>(const_cast<G4UserRunAction*>(G4RunManager::GetRunManager()->GetUserRunAction()));
+  run_action->GetRootIO()->FillReactionTree(reaction_data);
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+void H11BReaction::Generate675SymmetrizedCoherent3Alpha(const G4HadProjectile& projectile,
+                                                        G4ParticleDefinition* target,
+                                                        G4ParticleDefinition* product1,
+                                                        G4ParticleDefinition* product2,
+                                                        G4ParticleDefinition* product3)
+{
+  reaction_data.Clear();
+
+  const G4double m_projectile = projectile.GetDefinition()->GetPDGMass();
+  const G4double m_target = target->GetPDGMass();
+  const G4double m_4He = product1->GetPDGMass();
+  G4ParticleDefinition* particle_8Be = G4IonTable::GetIonTable()->GetIon(4, 8, 0. * CLHEP::keV);
+  const G4double m_8Be_ground = particle_8Be->GetPDGMass();
+
+  const G4double kinetic_lab_projectile = projectile.GetKineticEnergy();
+  const G4double s = m_projectile * m_projectile + m_target * m_target + 2 * m_target * (m_projectile + kinetic_lab_projectile);
+  const G4double sqrt_s = std::sqrt(s);
+  const G4double ex_max = std::max(0., sqrt_s - m_4He - m_8Be_ground);
+
+  const G4double p_lab_projectile = SafeSqrt(kinetic_lab_projectile * kinetic_lab_projectile + 2 * kinetic_lab_projectile * m_projectile);
+  const G4ThreeVector momentum_lab_projectile = projectile.GetMomentumDirection() * p_lab_projectile;
+  const G4LorentzVector lv_lab_projectile(momentum_lab_projectile, m_projectile + kinetic_lab_projectile);
+  const G4LorentzVector lv_lab_target(G4ThreeVector(0., 0., 0.), m_target);
+  const G4LorentzVector lv_lab_total = lv_lab_projectile + lv_lab_target;
+
+  auto make_candidate = [&]() {
+    ThreeAlphaCandidate candidate;
+
+    const G4double m23 = SamplePhaseSpaceM23(sqrt_s, m_4He);
+    const G4double e_cm_alpha1 = (s + m_4He * m_4He - m23 * m23) / (2.0 * sqrt_s);
+    const G4double p_cm_alpha1 = SafeSqrt(e_cm_alpha1 * e_cm_alpha1 - m_4He * m_4He);
+    const G4ThreeVector dir_cm_alpha1 = H11BAngularDistribution::SampleIsotropicDirection();
+
+    const G4LorentzVector lv_cm_total(0., 0., 0., sqrt_s);
+    const G4LorentzVector lv_cm_alpha1(p_cm_alpha1 * dir_cm_alpha1.x(),
+                                        p_cm_alpha1 * dir_cm_alpha1.y(),
+                                        p_cm_alpha1 * dir_cm_alpha1.z(),
+                                        e_cm_alpha1);
+    const G4LorentzVector lv_cm_23 = lv_cm_total - lv_cm_alpha1;
+
+    const G4double e_23_alpha2 = m23 / 2.0;
+    const G4double p_23_alpha2 = SafeSqrt(e_23_alpha2 * e_23_alpha2 - m_4He * m_4He);
+    const G4ThreeVector dir_23_alpha2 = H11BAngularDistribution::SampleIsotropicDirection();
+    G4LorentzVector lv_23_alpha2(p_23_alpha2 * dir_23_alpha2.x(),
+                                  p_23_alpha2 * dir_23_alpha2.y(),
+                                  p_23_alpha2 * dir_23_alpha2.z(),
+                                  e_23_alpha2);
+    G4LorentzVector lv_23_alpha3(-lv_23_alpha2.vect(), e_23_alpha2);
+
+    G4LorentzVector lv_cm_alpha2 = lv_23_alpha2;
+    lv_cm_alpha2.boost(lv_cm_23.boostVector());
+    G4LorentzVector lv_cm_alpha3 = lv_23_alpha3;
+    lv_cm_alpha3.boost(lv_cm_23.boostVector());
+
+    candidate.lv_cm_alpha = {lv_cm_alpha1, lv_cm_alpha2, lv_cm_alpha3};
+
+    for (G4int i = 0; i < 3; ++i) {
+      candidate.lv_lab_alpha[i] = candidate.lv_cm_alpha[i];
+      candidate.lv_lab_alpha[i].boost(lv_lab_total.boostVector());
+    }
+
+    return candidate;
+  };
+
+  auto candidate_weight = [&](const ThreeAlphaCandidate& candidate) {
+    return H11B675StrictWeight(candidate.lv_cm_alpha, sqrt_s, m_4He);
+  };
+
+  static thread_local std::map<std::string, G4double> weight_max_cache;
+  const auto cache_key = H11B675StrictWeightCacheKey(sqrt_s, m_4He);
+  G4double weight_max = 1.0;
+  auto cache_it = weight_max_cache.find(cache_key);
+  if (cache_it == weight_max_cache.end()) {
+    G4double scanned_max = 0.0;
+    const G4int n_scan = H11BConfig::Get675StrictWeightMaxScanCandidates();
+    for (G4int i = 0; i < n_scan; ++i) {
+      scanned_max = std::max(scanned_max, candidate_weight(make_candidate()));
+    }
+
+    weight_max = scanned_max > 0.0 ? H11BConfig::Get675StrictWeightMaxSafetyFactor() * scanned_max : 1.0;
+    cache_it = weight_max_cache.emplace(cache_key, weight_max).first;
+  } else {
+    weight_max = cache_it->second;
+  }
+
+  ThreeAlphaCandidate accepted_candidate = make_candidate();
+  G4double accepted_weight = candidate_weight(accepted_candidate);
+  ThreeAlphaCandidate best_candidate = accepted_candidate;
+  G4double best_weight = accepted_weight;
+  G4int accepted_attempt = 1;
+  G4bool accepted = false;
+
+  const G4int max_attempts = H11BConfig::Get675StrictMaxSamplingAttempts();
+  for (G4int attempt = 1; attempt <= max_attempts; ++attempt) {
+    ThreeAlphaCandidate candidate = make_candidate();
+    const G4double weight = candidate_weight(candidate);
+    if (weight > best_weight) {
+      best_weight = weight;
+      best_candidate = candidate;
+    }
+
+    if (weight_max <= 0.0 || G4UniformRand() * weight_max <= weight) {
+      accepted_candidate = candidate;
+      accepted_weight = weight;
+      accepted_attempt = attempt;
+      accepted = true;
+      break;
+    }
+  }
+
+  if (!accepted) {
+    accepted_candidate = best_candidate;
+    accepted_weight = best_weight;
+    accepted_attempt = max_attempts;
+  }
+
+  const auto& lv_lab_alpha1 = accepted_candidate.lv_lab_alpha[0];
+  const auto& lv_lab_alpha2 = accepted_candidate.lv_lab_alpha[1];
+  const auto& lv_lab_alpha3 = accepted_candidate.lv_lab_alpha[2];
+  const auto& lv_cm_alpha1 = accepted_candidate.lv_cm_alpha[0];
+  const auto& lv_cm_alpha2 = accepted_candidate.lv_cm_alpha[1];
+  const auto& lv_cm_alpha3 = accepted_candidate.lv_cm_alpha[2];
+
+  theParticleChange.AddSecondary(new G4DynamicParticle(product1, lv_lab_alpha1));
+  theParticleChange.AddSecondary(new G4DynamicParticle(product2, lv_lab_alpha2));
+  theParticleChange.AddSecondary(new G4DynamicParticle(product3, lv_lab_alpha3));
+
+  const G4LorentzVector lv_cm_pair23 = lv_cm_alpha2 + lv_cm_alpha3;
+  const G4LorentzVector lv_lab_pair23 = lv_lab_alpha2 + lv_lab_alpha3;
+  const G4double m_pair23 = InvariantMass(lv_cm_pair23);
+  const G4double eaa_pair23 = std::max(0.0, m_pair23 - 2.0 * m_4He);
+  const G4double ex_8be_pair23 = eaa_pair23 - Ex8BeGroundAbove2Alpha;
+  const G4double e_alpha8be_pair23 = sqrt_s - m_4He - m_pair23;
+  G4LorentzVector lv_alpha2_pair23 = lv_cm_alpha2;
+  lv_alpha2_pair23.boost(-lv_cm_pair23.boostVector());
+
+  G4LorentzVector lv_lab_3alpha = lv_lab_alpha1 + lv_lab_alpha2 + lv_lab_alpha3;
+  const G4ThreeVector beta_3alpha = lv_lab_3alpha.boostVector();
+  G4LorentzVector lv_3alpha_cm_alpha1 = lv_lab_alpha1;
+  G4LorentzVector lv_3alpha_cm_alpha2 = lv_lab_alpha2;
+  G4LorentzVector lv_3alpha_cm_alpha3 = lv_lab_alpha3;
+  lv_3alpha_cm_alpha1.boost(-beta_3alpha);
+  lv_3alpha_cm_alpha2.boost(-beta_3alpha);
+  lv_3alpha_cm_alpha3.boost(-beta_3alpha);
+
+  reaction_data.event = G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID();
+  reaction_data.e_alpha1 = lv_lab_alpha1.e() - m_4He;
+  reaction_data.e_alpha2 = lv_lab_alpha2.e() - m_4He;
+  reaction_data.e_alpha3 = lv_lab_alpha3.e() - m_4He;
+  reaction_data.e_3alpha_cm_alpha1 = lv_3alpha_cm_alpha1.e() - m_4He;
+  reaction_data.e_3alpha_cm_alpha2 = lv_3alpha_cm_alpha2.e() - m_4He;
+  reaction_data.e_3alpha_cm_alpha3 = lv_3alpha_cm_alpha3.e() - m_4He;
+  reaction_data.theta_lab_alpha1 = lv_lab_alpha1.theta();
+  reaction_data.theta_lab_alpha2 = lv_lab_alpha2.theta();
+  reaction_data.theta_lab_alpha3 = lv_lab_alpha3.theta();
+  reaction_data.phi_lab_alpha1 = lv_lab_alpha1.phi();
+  reaction_data.phi_lab_alpha2 = lv_lab_alpha2.phi();
+  reaction_data.phi_lab_alpha3 = lv_lab_alpha3.phi();
+  reaction_data.resonance_id = 675;
+  reaction_data.branch_id = 1;
+  reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
+  reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
+  reaction_data.e_cm_p11B = sqrt_s - m_projectile - m_target;
+  reaction_data.ex_max_8Be = ex_max;
+  reaction_data.eaa_8Be = eaa_pair23;
+  reaction_data.e_alpha8Be = e_alpha8be_pair23;
+  reaction_data.projectile_kinetic_lab = kinetic_lab_projectile;
+  reaction_data.projectile_px_lab = lv_lab_projectile.px();
+  reaction_data.projectile_py_lab = lv_lab_projectile.py();
+  reaction_data.projectile_pz_lab = lv_lab_projectile.pz();
+  reaction_data.projectile_p_lab = lv_lab_projectile.vect().mag();
+  reaction_data.projectile_theta_lab = lv_lab_projectile.vect().theta();
+  reaction_data.projectile_phi_lab = lv_lab_projectile.vect().phi();
+
+  const G4ThreeVector beam_axis = projectile.GetMomentumDirection();
+  reaction_data.cos_theta_primary_cm = SafeCosBetween(lv_cm_alpha1.vect(), beam_axis);
+  reaction_data.cos_chi_exit = SafeCosBetween(lv_cm_alpha1.vect(), lv_cm_alpha2.vect());
+  reaction_data.phi_primary_cm = lv_cm_alpha1.phi();
+  reaction_data.cos_chi_secondary_8be = SafeCosBetween(lv_cm_pair23.vect(), lv_alpha2_pair23.vect());
+  reaction_data.cos_theta_secondary_correlation = reaction_data.cos_chi_secondary_8be;
+  reaction_data.primary_angular_mode = 2;
+  reaction_data.primary_a1_used = 0.0;
+  reaction_data.primary_a2_used = 0.0;
+  reaction_data.h11b675_decay_model = 2;
+  reaction_data.h11b675_decay_model_used = 2;
+  reaction_data.secondary_angular_model = 2;
+  reaction_data.secondary_a2_used = 0.0;
+  reaction_data.secondary_a4_used = 0.0;
+  reaction_data.background_sequential_model = 0;
+  reaction_data.cos_chi_675_internal = reaction_data.cos_chi_secondary_8be;
+  reaction_data.phi_chi_675_internal = AzimuthAroundAxis(lv_alpha2_pair23.vect(), lv_cm_pair23.vect());
+  reaction_data.opening_angle_alpha12_cm = SafeOpeningAngle(lv_3alpha_cm_alpha1.vect(), lv_3alpha_cm_alpha2.vect());
+  reaction_data.opening_angle_alpha13_cm = SafeOpeningAngle(lv_3alpha_cm_alpha1.vect(), lv_3alpha_cm_alpha3.vect());
+  reaction_data.opening_angle_alpha23_cm = SafeOpeningAngle(lv_3alpha_cm_alpha2.vect(), lv_3alpha_cm_alpha3.vect());
+  reaction_data.e_alpha1_cm = reaction_data.e_3alpha_cm_alpha1;
+  reaction_data.e_alpha2_cm = reaction_data.e_3alpha_cm_alpha2;
+  reaction_data.e_alpha3_cm = reaction_data.e_3alpha_cm_alpha3;
+  reaction_data.e_8be_excitation = ex_8be_pair23;
+  reaction_data.ex_8Be = ex_8be_pair23;
+  reaction_data.e_8Be = lv_lab_pair23.e() - m_pair23;
+  reaction_data.theta_lab_8Be = lv_lab_pair23.theta();
+  reaction_data.phi_lab_8Be = lv_lab_pair23.phi();
+  reaction_data.event_weight = ReactionChannelEventWeight(reaction_channel, selected_components);
+  reaction_data.event_sampling_weight = reaction_data.event_weight;
+  reaction_data.h11b675_strict_weight = accepted_weight;
+  reaction_data.h11b675_strict_weight_max = weight_max;
+  reaction_data.h11b675_strict_sampling_attempts = accepted_attempt;
+
+  G4ThreeVector reaction_position;
+  auto event_manager = G4EventManager::GetEventManager();
+  auto tracking_manager = event_manager ? event_manager->GetTrackingManager() : nullptr;
+  auto current_track = tracking_manager ? tracking_manager->GetTrack() : nullptr;
+  if (current_track) {
+    reaction_position = current_track->GetPosition();
+  }
+
+  reaction_data.x = reaction_position.x();
+  reaction_data.y = reaction_position.y();
+  reaction_data.z = reaction_position.z();
+  FillCrossSectionDiagnostics(reaction_data, selected_components);
+  FillRuntimeConfigDiagnostics(reaction_data);
+  reaction_data.h11b675_strict_weight = accepted_weight;
+  reaction_data.h11b675_strict_weight_max = weight_max;
+  reaction_data.h11b675_strict_sampling_attempts = accepted_attempt;
+  std::snprintf(reaction_data.reaction, sizeof(reaction_data.reaction), "p11B_675_symmetrizedCoherentL1L3");
 
   RunAction* run_action = static_cast<RunAction*>(const_cast<G4UserRunAction*>(G4RunManager::GetRunManager()->GetUserRunAction()));
   run_action->GetRootIO()->FillReactionTree(reaction_data);
@@ -1059,7 +1671,7 @@ void H11BReaction::GenerateGammaCapture(const G4HadProjectile& projectile, G4Par
   reaction_data.resonance_id = static_cast<G4int>(gamma_resonance);
   reaction_data.branch_id = -1;
   reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
-  reaction_data.background_mode = static_cast<G4int>(g_background_mode);
+  reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
   reaction_data.gamma_resonance = static_cast<G4int>(gamma_resonance);
   reaction_data.gamma_branch = static_cast<G4int>(gamma_branch);
   reaction_data.e_cm_p11B = sqrt_s - m_projectile - m_target;
@@ -1070,7 +1682,6 @@ void H11BReaction::GenerateGammaCapture(const G4HadProjectile& projectile, G4Par
   reaction_data.projectile_p_lab = lv_lab_projectile.vect().mag();
   reaction_data.projectile_theta_lab = lv_lab_projectile.vect().theta();
   reaction_data.projectile_phi_lab = lv_lab_projectile.vect().phi();
-  reaction_data.gamma_bias_factor = H11BConfig::GetGammaBiasFactor();
   reaction_data.gamma_event_weight = 1.0;
 
   const G4double physical = GammaBranchPhysicalWeight(gamma_branch, selected_components);
@@ -1348,10 +1959,10 @@ void H11BReaction::GenerateThreeBodyPhaseSpace(const G4HadProjectile& projectile
   reaction_data.phi_lab_alpha1 = lv_lab_alpha1.phi();
   reaction_data.phi_lab_alpha2 = lv_lab_alpha2.phi();
   reaction_data.phi_lab_alpha3 = lv_lab_alpha3.phi();
-  reaction_data.resonance_id = 0;
+  reaction_data.resonance_id = resonance_type == Resonance675 ? 675 : 165;
   reaction_data.branch_id = -1;
   reaction_data.reaction_channel = static_cast<G4int>(reaction_channel);
-  reaction_data.background_mode = static_cast<G4int>(g_background_mode);
+  reaction_data.background_mode = DirectDecayPhaseSpaceModeForOutput;
   reaction_data.e_cm_p11B = sqrt_s - m_projectile - m_target;
   reaction_data.ex_max_8Be = ex_max;
   reaction_data.eaa_8Be = 0.;
@@ -1400,22 +2011,8 @@ void H11BReaction::GenerateThreeBodyPhaseSpace(const G4HadProjectile& projectile
   reaction_data.z = reaction_position.z();
   FillCrossSectionDiagnostics(reaction_data, selected_components);
   FillRuntimeConfigDiagnostics(reaction_data);
-  reaction_data.sigma_eval_b = selected_components.sigma_eval / barn;
-  reaction_data.sigma_165_model_b = selected_components.sigma_165_model / barn;
-  reaction_data.sigma_675_model_b = selected_components.sigma_675_model / barn;
-  reaction_data.sigma_165_used_b = selected_components.sigma_165 / barn;
-  reaction_data.sigma_675_used_b = selected_components.sigma_675 / barn;
-  reaction_data.sigma_total_used_b = selected_components.sigma_total / barn;
-  reaction_data.sigma_model_sum_b = (selected_components.sigma_165_model + selected_components.sigma_675_model) / barn;
-  reaction_data.model_scale_factor = reaction_data.sigma_model_sum_b > 0.0 ? (selected_components.sigma_165 + selected_components.sigma_675) / (selected_components.sigma_165_model + selected_components.sigma_675_model) : 1.0;
-  reaction_data.sigma_background_b = selected_components.sigma_background / barn;
-  if (selected_components.sigma_total > 0.) {
-    reaction_data.channel_probability_165 = selected_components.sigma_165 / selected_components.sigma_total;
-    reaction_data.channel_probability_675 = selected_components.sigma_675 / selected_components.sigma_total;
-    reaction_data.channel_probability_background = selected_components.sigma_background / selected_components.sigma_total;
-  }
-
-  std::snprintf(reaction_data.reaction, sizeof(reaction_data.reaction), "background3alpha_phaseSpace");
+  std::snprintf(reaction_data.reaction, sizeof(reaction_data.reaction),
+                resonance_type == Resonance675 ? "675_directdecay_phaseSpace" : "165_directdecay_phaseSpace");
 
   RunAction* run_action = static_cast<RunAction*>(const_cast<G4UserRunAction*>(G4RunManager::GetRunManager()->GetUserRunAction()));
   run_action->GetRootIO()->FillReactionTree(reaction_data);

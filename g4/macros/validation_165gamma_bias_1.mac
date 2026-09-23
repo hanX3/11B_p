@@ -33,14 +33,14 @@
 /output/printConfig
 
 # H11B reaction model
-/h11b/evaluatedCrossSection tentori2023
 
-# Background is phase-space only.
-/h11b/backgroundMode phaseSpace
+# Direct decay is phase-space only.
 
 # Bias settings
 /h11b/crossSectionBiasFactor 1000000
-/h11b/backgroundBiasFactor 1
+/h11b/enableDirectDecay true
+/h11b/165SequentialDecayFraction 0.0
+/h11b/675SequentialDecayFraction 0.0
 /h11b/gammaBiasFactor 1
 
 # Enable only 165-keV gamma capture.
