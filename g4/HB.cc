@@ -45,8 +45,8 @@ ULong64_t MakeRandomSeed()
 G4int ParseThreadCount(const char* value)
 {
   const auto threads = std::stoi(value);
-  if (threads <= 0) {
-    throw std::out_of_range("thread count must be positive");
+  if (threads <= 0 || threads > 8) {
+    throw std::out_of_range("thread count must be between 1 and 8");
   }
   return threads;
 }
@@ -55,8 +55,8 @@ void PrintUsage(const char* program_name)
 {
   G4cerr << "Usage:\n"
          << "  " << program_name << "                         # interactive UI mode\n"
-         << "  " << program_name << " <macro.mac>              # batch mode, auto seed, 4 threads\n"
-         << "  " << program_name << " <macro.mac> <threads>    # batch mode, auto seed, N threads\n";
+         << "  " << program_name << " <macro.mac>              # batch mode, auto seed, 8 threads\n"
+         << "  " << program_name << " <macro.mac> <threads>    # batch mode, auto seed, 1..8 threads\n";
 }
 
 void MakeDataDirectory()
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
   G4cout << "\n----> Random seed = " << random_seed << " (auto)" << G4endl;
   ROOT::EnableThreadSafety();
 
-  G4int n_threads = 4;
+  G4int n_threads = 8;
   if (!ui && argc > 2) {
     try {
       n_threads = ParseThreadCount(argv[2]);

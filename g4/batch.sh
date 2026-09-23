@@ -6,14 +6,16 @@ set -euo pipefail
 #
 # Examples:
 #   ./batch.sh
-#   ./batch.sh macros/run.mac 10
-#   ./batch.sh ../validation_angle_distribution/validation_angle_162_primary_off.mac 10
+#   ./batch.sh macros/run.mac 8
+#   ./batch.sh ../validation_angle_distribution/validation_angle_162_primary_off.mac 8
 #
 # The script can be launched either from the project root or from build/.
 # It always writes and merges ROOT output under the project-local data/ directory.
+# Defaults to 8 worker threads; accepts 1..8. After a successful merge,
+# thread ROOT files are removed unless CLEAN_THREADS=0 is set.
 
 MACRO_ARG="${1:-macros/run.mac}"
-THREADS="${2:-4}"
+THREADS="${2:-8}"
 CALL_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -75,8 +77,8 @@ resolve_macro_path() {
   return 1
 }
 
-if ! [[ "${THREADS}" =~ ^[0-9]+$ ]] || [[ "${THREADS}" -lt 1 ]]; then
-  echo "ERROR: threads must be a positive integer."
+if ! [[ "${THREADS}" =~ ^[0-9]+$ ]] || [[ "${THREADS}" -lt 1 || "${THREADS}" -gt 8 ]]; then
+  echo "ERROR: threads must be an integer between 1 and 8."
   echo "Usage: $0 [macro] [threads]"
   exit 2
 fi

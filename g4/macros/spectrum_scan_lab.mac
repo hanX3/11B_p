@@ -1,0 +1,54 @@
+# One energy point of a LAB scan. run_scan.py sets gun energy.
+# Inclusive alpha LAB spectrum at generation, with both resonance tails.
+# High cross-section bias: conditional spectrum, not absolute physical yield.
+/control/verbose 1
+/run/verbose 0
+/event/verbose 0
+/tracking/verbose 0
+/virtualSphere/enabled false
+/beam/profile point
+/beam/offsetX 0 mm
+/beam/offsetY 0 mm
+/beam/z 0 mm
+/target/material Enriched_B11
+/target/thickness 0.12 um
+/target/backing false
+/run/initialize
+/gun/particle proton
+/gun/energy 150 keV
+/output/saveReaction true
+/output/saveVirtualSphere false
+/output/saveEvent false
+/h11b/forceDetailedChannel off
+/h11b/162BWScaleFactor 1.0
+/h11b/675ScaleFactor 1.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+/h11b/enableDirectDecay false
+/h11b/162SequentialDecayFraction 1.0
+/h11b/675SequentialDecayFraction 1.0
+/h11b/162Alpha0BranchingFraction 0.05
+/h11b/crossSectionBiasFactor 100000000000
+/h11b/enable162PrimaryAngularDistribution true
+/h11b/162PrimaryAlpha0AngularA1 0.0
+/h11b/162PrimaryAlpha0AngularA2 0.6
+/h11b/162PrimaryAngularA1 0.0
+/h11b/162PrimaryAngularA2 0.0
+/h11b/enable162Alpha1SecondaryAngularCorrelation true
+/h11b/162Alpha1SecondaryA2 -0.489
+/h11b/162Alpha1SecondaryA4 0.647
+# Explicit project defaults for the 675-keV resonance decay model.
+/h11b/675AlphaDecayModel symmetrizedCoherentL1L3
+/h11b/675StrictL1Fraction 0.76
+/h11b/675StrictL13Phase 4.209734155810323
+/h11b/675StrictCoherentL13 true
+/h11b/675StrictPermutationSymmetrized true
+/h11b/675Strict8BeLambdaEnergyKeV 3037
+/h11b/675Strict8BeReducedWidthSquaredKeV 1075
+/h11b/675StrictWeightMaxSafetyFactor 3.0
+/h11b/675StrictWeightMaxScanCandidates 2000
+/h11b/675StrictMaxSamplingAttempts 10000
+/target/printConfig
+/beam/printConfig
+/h11b/printConfig
+/run/beamOn 1000000

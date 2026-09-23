@@ -1,0 +1,57 @@
+# Inclusive single-alpha LAB kinetic-energy spectrum at reaction generation.
+# Each reaction contributes THREE entries: e_alpha1, e_alpha2, e_alpha3.
+# Fractions per reaction: 8Be(gs) 5%, 8Be(2+) 95%, direct 0%.
+# This high-bias sample is for the conditional spectrum, not absolute yield
+# or a physical target-depth distribution. Check projectile_kinetic_lab.
+
+/control/verbose 1
+/run/verbose 0
+/event/verbose 0
+/tracking/verbose 0
+
+/virtualSphere/enabled false
+/beam/profile point
+/beam/offsetX 0 mm
+/beam/offsetY 0 mm
+/beam/z 0 mm
+/target/material Enriched_B11
+/target/thickness 0.12 um
+/target/backing false
+
+/run/initialize
+/gun/particle proton
+/gun/energy 162 keV
+
+/output/saveReaction true
+/output/saveVirtualSphere false
+/output/saveEvent false
+
+/h11b/forceDetailedChannel off
+/h11b/162BWScaleFactor 1.0
+/h11b/675ScaleFactor 0.0
+/h11b/enable162GammaCapture false
+/h11b/enable675GammaCapture false
+/h11b/enableDirectDecay false
+/h11b/162SequentialDecayFraction 1.0
+/h11b/162Alpha0BranchingFraction 0.05
+/h11b/crossSectionBiasFactor 100000000000
+
+# Explicitly preserve the project's 162-keV angular model.
+# Primary alpha: gs W = 1 + 0.6 P2; excited-state branch isotropic.
+/h11b/enable162PrimaryAngularDistribution true
+/h11b/162PrimaryAlpha0AngularA1 0.0
+/h11b/162PrimaryAlpha0AngularA2 0.6
+/h11b/162PrimaryAngularA1 0.0
+/h11b/162PrimaryAngularA2 0.0
+# Secondary alpha correlation in the 8Be(2+) rest frame.
+/h11b/enable162Alpha1SecondaryAngularCorrelation true
+/h11b/162Alpha1SecondaryA2 -0.489
+/h11b/162Alpha1SecondaryA4 0.647
+
+/target/printConfig
+/beam/printConfig
+/output/printConfig
+/h11b/printConfig
+
+# Number of incident protons; inspect the actual reaction-tree entries.
+/run/beamOn 1000000
